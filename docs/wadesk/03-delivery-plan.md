@@ -21,9 +21,9 @@ Goal: a working, repeatable engineering setup before any feature code.
 
 **Acceptance:** a trivial PR runs CI (Chatwoot specs + engine tests) and merges; `docker compose up` starts Chatwoot + engine locally.
 
-### M1 — Engine: session lifecycle
+### M1 — Engine: session lifecycle ✅
 
-**Status:** acceptance run 2026-09-25 ([record](acceptance/M1.md)); Gate B pending; wrong-number check deferred to M2 acceptance.
+**Status:** accepted 2026-09-25 ([record](acceptance/M1.md)); wrong-number check deferred to M2 acceptance.
 Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 
 | Task | Output |

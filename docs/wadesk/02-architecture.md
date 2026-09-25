@@ -61,7 +61,9 @@ New files (no upstream conflicts):
 
 | File | Responsibility |
 |---|---|
-| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: `send_message`, `media_url`, `api_headers`, `validate_provider_config?`; `send_template`/`sync_templates` are no-ops or explicit unsupported errors |
+| `app/models/concerns/whatsapp_web_channel.rb` | Included in `Channel::Whatsapp`: plan gating (on create), default `link_method`, start engine session after create, remove it before destroy |
+| `app/jobs/whatsapp_web/start_session_job.rb` | Starts/restarts the engine session in the background (retried by Sidekiq) |
+| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: validates `link_method`; `sync_templates` only marks the sync (no templates on WhatsApp Web); `send_message`, `media_url`, `api_headers` added in M2.4/M3 |
 | `app/services/whatsapp/incoming_message_baileys_service.rb` | Subclass of `IncomingMessageBaseService`; overrides attachment download to fetch from the engine |
 | `app/services/whatsapp_web/engine_client.rb` | Thin HTTP client for the engine API (auth header, timeouts, error mapping) |
 | `app/services/whatsapp_web/session_lifecycle_service.rb` | Start / reconnect / logout / delete sessions |
@@ -79,7 +81,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 
 | File | Change |
 |---|---|
-| `app/models/channel/whatsapp.rb` | Add `baileys` to `PROVIDERS`; `provider_service` branch; lifecycle hooks (start session after create, logout before destroy) |
+| `app/models/channel/whatsapp.rb` | Add `baileys` to `PROVIDERS`; `provider_service` branch; `include WhatsappWebChannel` (lifecycle and gating live in the concern) |
 | `app/jobs/webhooks/whatsapp_events_job.rb` | Dispatch `baileys` to `IncomingMessageBaileysService` |
 | `app/services/conversations/message_window_service.rb` | No 24-hour window for `baileys` (WW-FR-24) |
 | `config/routes.rb` | Engine webhook route + UI session routes |
