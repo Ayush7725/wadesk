@@ -1,15 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import { DisconnectReason } from 'baileys';
+import { DisconnectReason, type proto, type WAMessage } from 'baileys';
 import { pino } from 'pino';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCipher } from '../../src/auth/cipher.js';
 import { usePostgresAuthState } from '../../src/auth/postgres-auth-state.js';
 import { createPool } from '../../src/db/pool.js';
-import { SessionNotFoundError } from '../../src/sessions/errors.js';
+import { MessageStore } from '../../src/messages/store.js';
+import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../../src/sessions/errors.js';
 import { SessionManager } from '../../src/sessions/manager.js';
 import { SessionRepository } from '../../src/sessions/repository.js';
 import type { SessionTiming } from '../../src/sessions/session.js';
-import type { ConnectionEvent } from '../../src/sessions/types.js';
+import type { EngineEvent } from '../../src/sessions/types.js';
 import { databaseUrl } from '../support/db.js';
 import { fakeSocketFactory } from '../support/fake-socket.js';
 
@@ -26,7 +27,8 @@ describe('SessionManager', () => {
   const pool = createPool(databaseUrl);
   const repository = new SessionRepository(pool);
   const cipher = createCipher(randomBytes(32).toString('base64'));
-  let events: { sessionId: string; event: ConnectionEvent }[];
+  const messages = new MessageStore(pool, cipher);
+  let events: { sessionId: string; event: EngineEvent }[];
   let managers: SessionManager[];
 
   const build = (overrides: { failAuthFor?: string; timing?: SessionTiming } = {}) => {
@@ -43,6 +45,7 @@ describe('SessionManager', () => {
           return Promise.resolve();
         },
       },
+      messages,
       logger: pino({ level: 'silent' }),
       timing: overrides.timing ?? FAST,
     });
@@ -55,14 +58,16 @@ describe('SessionManager', () => {
     if (!socket) throw new Error(`socket ${String(index)} was not created`);
     return socket;
   };
-  const statesOf = (id: string) => events.filter((e) => e.sessionId === id).map((e) => e.event.state);
+  const statesOf = (id: string) =>
+    events.flatMap(({ sessionId, event }) => (sessionId === id && event.event === 'connection' ? [event.state] : []));
+  const messageEventsOf = (id: string) => events.filter(({ sessionId, event }) => sessionId === id && event.event === 'messages');
   const credsCount = async (id: string) =>
     Number((await pool.query<{ n: string }>('SELECT count(*) AS n FROM wadesk_engine.auth_keys WHERE session_id = $1', [id])).rows[0]?.n);
 
   beforeEach(async () => {
     events = [];
     managers = [];
-    await pool.query("DELETE FROM wadesk_engine.sessions WHERE id LIKE 't-%'");
+    await pool.query("DELETE FROM wadesk_engine.sessions WHERE id LIKE 't-%'"); // cascades to stored messages
   });
   afterEach(() => {
     for (const manager of managers) manager.shutdown();
@@ -293,6 +298,82 @@ describe('SessionManager', () => {
 
     expect(second.sockets).toHaveLength(1);
     expect((await second.manager.get('t-good')).state).toBe('connecting');
+  });
+
+  describe('incoming messages', () => {
+    const customerMessage = (id: string, message: proto.IMessage): WAMessage => ({
+      key: { remoteJid: '919876543210@s.whatsapp.net', fromMe: false, id },
+      message,
+      messageTimestamp: 1790000000,
+      pushName: 'Ravi',
+    });
+    const storedCount = async () =>
+      Number((await pool.query<{ n: string }>("SELECT count(*) AS n FROM wadesk_engine.messages WHERE session_id = 't-1'")).rows[0]?.n);
+
+    const connected = async () => {
+      const built = build();
+      await built.manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+      socketAt(built.sockets, 0).open(PHONE);
+      await eventually(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
+      return built;
+    };
+
+    it('forwards new customer messages to Chatwoot after the connection event, in order', async () => {
+      const { sockets } = await connected();
+
+      socketAt(sockets, 0).receive([customerMessage('M1', { conversation: 'first' }), customerMessage('M2', { conversation: 'second' })]);
+
+      await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(2));
+      expect(messageEventsOf('t-1').map(({ event }) => (event.event === 'messages' ? event.messages[0]?.id : undefined))).toEqual(['M1', 'M2']);
+      expect(events.findIndex(({ event }) => event.event === 'messages')).toBeGreaterThan(
+        events.findIndex(({ event }) => event.event === 'connection' && event.state === 'connected'),
+      );
+    });
+
+    it('ignores history sync and messages that do not belong in the inbox', async () => {
+      const { sockets } = await connected();
+
+      socketAt(sockets, 0).receive([customerMessage('H1', { conversation: 'old' })], 'append');
+      socketAt(sockets, 0).receive([{ ...customerMessage('G1', { conversation: 'group' }), key: { remoteJid: '1203@g.us', id: 'G1' } }]);
+      socketAt(sockets, 0).receive([customerMessage('M1', { conversation: 'real' })]);
+
+      await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(1));
+    });
+
+    it('stores media details encrypted for later download, but not text messages', async () => {
+      const { sockets } = await connected();
+
+      socketAt(sockets, 0).receive([
+        customerMessage('T1', { conversation: 'text only' }),
+        customerMessage('P1', { imageMessage: { mimetype: 'image/jpeg', caption: 'secret caption', mediaKey: Buffer.from('k') } }),
+      ]);
+
+      await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(2));
+      expect(await storedCount()).toBe(1);
+      const { rows } = await pool.query<{ payload: Buffer }>("SELECT payload FROM wadesk_engine.messages WHERE session_id = 't-1'");
+      expect(rows[0]?.payload.includes(Buffer.from('secret caption'))).toBe(false);
+    });
+
+    it('downloads stored media through the connected socket', async () => {
+      const { manager, sockets } = await connected();
+      socketAt(sockets, 0).receive([customerMessage('P1', { imageMessage: { mimetype: 'image/jpeg' } })]);
+      await eventually(async () => expect(await storedCount()).toBe(1));
+
+      const { stream, message } = await manager.downloadMedia('t-1', 'P1');
+
+      expect(Buffer.concat(await stream.toArray()).toString()).toBe('media:P1');
+      expect(message.message?.imageMessage?.mimetype).toBe('image/jpeg');
+    });
+
+    it('reports unknown or expired media clearly', async () => {
+      const { manager, sockets } = await connected();
+      socketAt(sockets, 0).receive([customerMessage('P1', { imageMessage: { mimetype: 'image/jpeg' } })]);
+      await eventually(async () => expect(await storedCount()).toBe(1));
+
+      await expect(manager.downloadMedia('t-1', 'NOPE')).rejects.toThrow(MediaNotFoundError);
+      socketAt(sockets, 0).failDownloads = true;
+      await expect(manager.downloadMedia('t-1', 'P1')).rejects.toThrow(MediaUnavailableError);
+    });
   });
 
   it('is idempotent while the same number is live', async () => {

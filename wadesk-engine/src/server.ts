@@ -4,6 +4,7 @@ import { createCipher } from './auth/cipher.js';
 import { usePostgresAuthState } from './auth/postgres-auth-state.js';
 import { loadConfig } from './config.js';
 import { migrate } from './db/migrate.js';
+import { MessageStore } from './messages/store.js';
 import { DEFAULT_DISPATCHER_OPTIONS, Dispatcher } from './outbox/dispatcher.js';
 import { OutboxSink } from './outbox/outbox.js';
 import { createPool } from './db/pool.js';
@@ -26,6 +27,7 @@ await migrate(config.databaseUrl, (message) => {
 });
 
 const repository = new SessionRepository(pool);
+const messages = new MessageStore(pool, cipher);
 const dispatcher = new Dispatcher(pool, { ...DEFAULT_DISPATCHER_OPTIONS, secret: config.webhookSecret }, logger.child({ component: 'outbox' }));
 
 const sessions = new SessionManager({
@@ -36,14 +38,21 @@ const sessions = new SessionManager({
     dispatcher.kick();
   }),
   // Baileys is verbose below "warn"; it also receives this logger.
+  messages,
   logger: logger.child({ component: 'sessions' }, { level: 'warn' }),
   timing: DEFAULT_TIMING,
 });
 
 const app = buildApp({ pool, sessions, apiToken: config.apiToken }, { loggerInstance: logger });
 
+// Media metadata is only kept for the retention window.
+const pruneTimer = setInterval(() => {
+  messages.prune().catch((error: unknown) => logger.error({ err: error }, 'pruning message metadata failed'));
+}, 60 * 60_000);
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
+    clearInterval(pruneTimer);
     sessions.shutdown();
     void dispatcher
       .stop()

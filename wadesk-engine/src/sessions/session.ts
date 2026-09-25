@@ -1,6 +1,10 @@
-import { DisconnectReason, jidDecode, type ConnectionState } from 'baileys';
+import { DisconnectReason, jidDecode, type ConnectionState, type MessageUpsertType, type WAMessage } from 'baileys';
+import type { Readable } from 'node:stream';
 import type { Logger } from 'pino';
 import type { PostgresAuthState } from '../auth/postgres-auth-state.js';
+import type { MessageStore } from '../messages/store.js';
+import { normalizeIncoming } from '../whatsapp/normalizer.js';
+import { MediaNotFoundError, MediaUnavailableError } from './errors.js';
 import type { SocketFactory, WaSocket } from '../whatsapp/socket.js';
 import type { SessionRepository } from './repository.js';
 import type { ConnectionEvent, EventSink, LinkMethod, SessionRecord, SessionState } from './types.js';
@@ -18,6 +22,7 @@ export interface SessionDeps {
   createAuthState: (sessionId: string) => Promise<PostgresAuthState>;
   createSocket: SocketFactory;
   events: EventSink;
+  messages: MessageStore;
   logger: Logger;
   timing: SessionTiming;
 }
@@ -29,6 +34,8 @@ export interface SessionSnapshot {
   me?: { phone: string };
   lastError?: string;
 }
+
+const MEDIA_TYPES = new Set(['image', 'video', 'audio', 'document', 'sticker']);
 
 const statusCode = (error: unknown): number | undefined =>
   (error as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
@@ -127,12 +134,42 @@ export class Session {
         .catch((error: unknown) => this.deps.logger.error({ err: error }, 'saving credentials failed'));
     });
     // Updates are handled strictly one at a time, in arrival order, so stored state and emitted
-    // events can never be reordered (e.g. "connected" landing after "disconnected").
+    // events can never be reordered (e.g. "connected" landing after "disconnected", or a message
+    // overtaking the connection event before it).
     socket.onConnectionUpdate((update) => {
-      this.updates = this.updates
-        .then(() => this.handleUpdate(socket, update))
-        .catch((error: unknown) => this.deps.logger.error({ err: error }, 'connection update failed'));
+      this.enqueue(() => this.handleUpdate(socket, update), 'connection update failed');
     });
+    socket.onMessagesUpsert((messages, type) => {
+      this.enqueue(() => this.handleMessages(socket, messages, type), 'incoming messages failed');
+    });
+  }
+
+  // Streams a stored incoming message's media (served to Chatwoot for attachments).
+  async downloadMedia(messageId: string): Promise<{ stream: Readable; message: WAMessage }> {
+    const message = await this.deps.messages.find(this.id, messageId);
+    if (!message) throw new MediaNotFoundError(messageId);
+    if (!this.socket) throw new MediaUnavailableError(messageId, new Error('session is not connected'));
+    try {
+      return { stream: await this.socket.downloadMedia(message), message };
+    } catch (error) {
+      throw new MediaUnavailableError(messageId, error);
+    }
+  }
+
+  private enqueue(work: () => Promise<void>, failure: string): void {
+    this.updates = this.updates.then(work).catch((error: unknown) => this.deps.logger.error({ err: error }, failure));
+  }
+
+  // New customer messages ("notify"; "append" is history/own-device sync) go to Chatwoot in order.
+  private async handleMessages(socket: WaSocket, messages: WAMessage[], type: MessageUpsertType): Promise<void> {
+    if (socket !== this.socket || type !== 'notify') return;
+
+    for (const message of messages) {
+      const event = normalizeIncoming(message);
+      if (!event) continue;
+      if (MEDIA_TYPES.has(event.messages[0]?.type ?? '')) await this.deps.messages.save(this.id, message);
+      await this.deps.events.emit(this.id, event);
+    }
   }
 
   private async handleUpdate(socket: WaSocket, update: Partial<ConnectionState>): Promise<void> {

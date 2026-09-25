@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { SessionNotFoundError } from '../sessions/errors.js';
+import type { Readable } from 'node:stream';
+import type { WAMessage } from 'baileys';
+import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../sessions/errors.js';
 import type { SessionSnapshot } from '../sessions/session.js';
 import type { LinkMethod } from '../sessions/types.js';
 
@@ -8,6 +10,7 @@ import type { LinkMethod } from '../sessions/types.js';
 export interface SessionService {
   upsert(id: string, expectedPhone: string, webhookUrl: string, linkMethod: LinkMethod): Promise<SessionSnapshot>;
   get(id: string): Promise<SessionSnapshot>;
+  downloadMedia(id: string, messageId: string): Promise<{ stream: Readable; message: WAMessage }>;
   remove(id: string): Promise<void>;
 }
 
@@ -30,6 +33,24 @@ const upsertBody = {
 
 interface IdRequest {
   Params: { id: string };
+}
+interface MediaRequest {
+  Params: { id: string; messageId: string };
+}
+
+const mediaParams = {
+  type: 'object',
+  required: ['id', 'messageId'],
+  properties: { ...idParams.properties, messageId: { type: 'string', pattern: '^[A-Za-z0-9]{1,64}$' } },
+} as const;
+
+// Content type and file name for a stored media message (Chatwoot names the attachment after it).
+function mediaDetails(message: WAMessage): { mimetype: string; filename: string } {
+  const content = message.message ?? {};
+  const part = content.documentMessage ?? content.imageMessage ?? content.videoMessage ?? content.ptvMessage ?? content.audioMessage ?? content.stickerMessage;
+  const mimetype = part?.mimetype ?? 'application/octet-stream';
+  const extension = mimetype.split(';')[0]?.split('/')[1] ?? 'bin';
+  return { mimetype, filename: content.documentMessage?.fileName ?? `${message.key.id ?? 'media'}.${extension}` };
 }
 interface UpsertRequest extends IdRequest {
   Body: { phone_number: string; webhook_url: string; link_method?: LinkMethod };
@@ -61,7 +82,8 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
     });
 
     scope.setErrorHandler((error, _request, reply) => {
-      if (error instanceof SessionNotFoundError) return sendError(reply, 404, error.code, error.message);
+      if (error instanceof SessionNotFoundError || error instanceof MediaNotFoundError) return sendError(reply, 404, error.code, error.message);
+      if (error instanceof MediaUnavailableError) return sendError(reply, 502, error.code, error.message);
       if ((error as { validation?: unknown }).validation) return sendError(reply, 422, 'invalid_request', (error as Error).message);
       throw error;
     });
@@ -75,6 +97,15 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
     scope.get<IdRequest>('/sessions/:id', { schema: { params: idParams } }, async (request) =>
       toResponse(await sessions.get(request.params.id)),
     );
+
+    scope.get<MediaRequest>('/sessions/:id/media/:messageId', { schema: { params: mediaParams } }, async (request, reply) => {
+      const { stream, message } = await sessions.downloadMedia(request.params.id, request.params.messageId);
+      const { mimetype, filename } = mediaDetails(message);
+      return reply
+        .header('content-type', mimetype)
+        .header('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+        .send(stream);
+    });
 
     scope.delete<IdRequest>('/sessions/:id', { schema: { params: idParams } }, async (request, reply) => {
       await sessions.remove(request.params.id);

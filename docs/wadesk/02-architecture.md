@@ -63,8 +63,7 @@ New files (no upstream conflicts):
 |---|---|
 | `app/models/concerns/whatsapp_web_channel.rb` | Included in `Channel::Whatsapp`: plan gating (on create), default `link_method`, start engine session after create, remove it before destroy |
 | `app/jobs/whatsapp_web/start_session_job.rb` | Starts/restarts the engine session in the background (retried by Sidekiq) |
-| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: validates `link_method`; `sync_templates` only marks the sync (no templates on WhatsApp Web); `send_message`, `media_url`, `api_headers` added in M2.4/M3 |
-| `app/services/whatsapp/incoming_message_baileys_service.rb` | Subclass of `IncomingMessageBaseService`; overrides attachment download to fetch from the engine |
+| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: validates `link_method`; `sync_templates` only marks the sync (no templates on WhatsApp Web); `media_url`/`api_headers` point attachment downloads at the engine; `send_message` in M3 |
 | `app/services/whatsapp_web/engine_client.rb` | Thin HTTP client for the engine API (auth header, timeouts, error mapping) |
 | `app/services/whatsapp_web/session_lifecycle_service.rb` | Start / reconnect / logout / delete sessions |
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
@@ -82,7 +81,6 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | File | Change |
 |---|---|
 | `app/models/channel/whatsapp.rb` | Add `baileys` to `PROVIDERS`; `provider_service` branch; `include WhatsappWebChannel` (lifecycle and gating live in the concern) |
-| `app/jobs/webhooks/whatsapp_events_job.rb` | Dispatch `baileys` to `IncomingMessageBaileysService` |
 | `app/services/conversations/message_window_service.rb` | No 24-hour window for `baileys` (WW-FR-24) |
 | `config/routes.rb` | Engine webhook route + UI session routes |
 | `config/features.yml` | Append `whatsapp_web` flag (`feature_flags_ext_1`) |
@@ -93,6 +91,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `settings/inbox/settingsPage/ConfigurationPage.vue` | Connection panel for `baileys` inboxes |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
+| `lib/regex_helper.rb` | `WHATSAPP_CHANNEL_REGEX` also accepts WhatsApp Web privacy IDs (`<digits>@lid`) as contact source ids |
 | `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
 Other provider-specific branches found in the code (templates, health, embedded signup, campaigns, CSAT
@@ -128,8 +127,8 @@ WhatsApp ─▶ Engine: messages.upsert
             ├─ Normalizer → contract payload (§4.2)
             └─ Outbox.insert ─▶ Dispatcher ─▶ POST /webhooks/whatsapp_web/:channel_id (HMAC)
 Chatwoot controller: verify HMAC (5-min replay window) → Webhooks::WhatsappEventsJob (existing, per-sender lock)
-            └─ IncomingMessageBaileysService (inherits dedup by source_id, contact + conversation rules)
-                 └─ attachments: GET engine /sessions/:id/media/:message_id
+            └─ Whatsapp::IncomingMessageService (existing, unchanged: dedup by source_id, contact + conversation rules)
+                 └─ attachments: channel.media_url → GET engine /sessions/:id/media/:message_id
 ```
 
 ### 3.3 Outgoing message
@@ -194,7 +193,7 @@ available the message is still delivered with `wa_id` = LID and linked later whe
 | `channel_whatsapp.provider_config` (existing jsonb) | Chatwoot | `{ "connection_state", "connected_at", "last_error" }` — no secrets |
 | `wadesk_engine.sessions` | Engine | `id, expected_phone, webhook_url, link_method, state, me_jid, me_lid, updated_at` |
 | `wadesk_engine.auth_keys` | Engine | `session_id, key, value_encrypted` (Baileys creds + signal keys) |
-| `wadesk_engine.messages` | Engine | `session_id, message_id, meta_json, created_at` (30-day retention; no text bodies) |
+| `wadesk_engine.messages` | Engine | `session_id, message_id, payload (encrypted: key + media part incl. media key), created_at` — media messages only, 30-day retention |
 | `wadesk_engine.outbox` | Engine | `id, session_id, webhook_url, payload, attempts, next_attempt_at` (URL stored per event so final events survive session deletion) |
 | `wadesk_consent_events` (new table) | Chatwoot | `account_id, contact_id, kind (opt_in/opt_out), scope, source, evidence, recorded_by, created_at` — append-only (ADR-0006) |
 

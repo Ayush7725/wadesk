@@ -21,5 +21,7 @@ module RegexHelper
   WHATSAPP_BSUID_REGEX = Regexp.new("\\A#{WHATSAPP_BSUID_PATTERN}\\z")
   WHATSAPP_WAMID_TOKEN_REGEX = Regexp.new(WHATSAPP_WAMID_TOKEN_PATTERN, Regexp::IGNORECASE)
   TWILIO_CHANNEL_WHATSAPP_REGEX = Regexp.new("\\A(?:whatsapp:\\+\\d{1,15}|whatsapp:#{WHATSAPP_BSUID_PATTERN})\\z")
-  WHATSAPP_CHANNEL_REGEX = Regexp.new("\\A(?:\\d{1,15}|#{WHATSAPP_BSUID_PATTERN})\\z")
+  # WaDesk: WhatsApp Web privacy IDs (LIDs, e.g. "123456789012345@lid") identify customers who hide their number.
+  WHATSAPP_LID_PATTERN = '\\d{1,20}@lid'.freeze
+  WHATSAPP_CHANNEL_REGEX = Regexp.new("\\A(?:\\d{1,15}|#{WHATSAPP_BSUID_PATTERN}|#{WHATSAPP_LID_PATTERN})\\z")
 end
