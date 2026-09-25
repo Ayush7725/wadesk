@@ -91,12 +91,14 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `settings/inbox/settingsPage/ConfigurationPage.vue` | Connection panel for `baileys` inboxes |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
+| `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |
 | `lib/regex_helper.rb` | `WHATSAPP_CHANNEL_REGEX` also accepts WhatsApp Web privacy IDs (`<digits>@lid`) as contact source ids |
 | `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
-Other provider-specific branches found in the code (templates, health, embedded signup, campaigns, CSAT
-templates, calling) already check for `whatsapp_cloud` explicitly and therefore skip `baileys` without changes.
-This is verified by spec in M2.
+Other provider-specific branches (templates, health, embedded signup, business token, CSAT templates, calling,
+contact-info requests) check for `whatsapp_cloud` explicitly and skip `baileys` without changes — verified by
+`spec/models/channel/whatsapp_web_channel_spec.rb` ("Cloud-only features", M2.6). Campaigns did **not**: the model accepted any WhatsApp
+inbox, so `WhatsappWebCampaignGuard` rejects WhatsApp Web inboxes at creation.
 
 ## 3. Key flows
 

@@ -48,7 +48,7 @@ Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 | M2.3 Engine `Normalizer` for text, media, location, contacts, reply context, LID mapping; group/status filtering | Unit tests from recorded fixtures |
 | M2.4 `IncomingMessageBaileysService` + job dispatch; media via engine `GET /media` | Service specs using shared contract fixtures |
 | M2.5 Contract fixtures shared by both test suites (`wadesk-engine/contract/fixtures/*.json`) | Same JSON verified on both sides |
-| M2.6 Regression: prove cloud-only paths (templates sync, health, campaigns, CSAT templates, calling) skip `baileys` | Specs |
+| M2.6 Regression: prove cloud-only paths (templates sync, health, campaigns, CSAT templates, calling) skip `baileys` | Specs — found campaigns accepted Web inboxes; M3.6 guard pulled forward into M2.6 |
 
 **Acceptance:** customer messages (text, image, voice note, document, reply) sent to the test number appear once,
 under the right contact, in a WhatsApp inbox; group messages do not appear; all existing WhatsApp specs pass.
@@ -63,7 +63,7 @@ Covers WW-FR-20, 21, 22, 23, 24, 25
 | M3.3 Receipts → `statuses` webhook → `Messages::StatusUpdateService` | Normalizer + service specs |
 | M3.4 Remove 24h window for `baileys`; new-conversation-by-phone works | Specs |
 | M3.5 Daily business-initiated chat cap for Web inboxes (SAFE-FR-02) | Service + request specs |
-| M3.6 Block campaigns/bulk on `baileys` inboxes at the API boundary (SAFE-FR-01) | Request specs |
+| M3.6 Block campaigns/bulk on `baileys` inboxes at the API boundary (SAFE-FR-01) | ✅ Done in M2.6 (model guard, 422 on create) |
 | M3.7 Opt-out keyword detection, consent events table, private note (SAFE-FR-10/11) | Model/service specs incl. Hindi/Hinglish and no-partial-match cases |
 
 **Acceptance:** agent replies (text, image, PDF, quoted reply) arrive on the customer phone; ticks progress

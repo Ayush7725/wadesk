@@ -74,4 +74,74 @@ RSpec.describe WhatsappWebChannel do
   it 'uses the Baileys provider service' do
     expect(channel.provider_service).to be_a(Whatsapp::Providers::WhatsappBaileysService)
   end
+
+  # M2.6: features that only exist for the Official Cloud API must skip or clearly reject WhatsApp Web
+  # inboxes instead of calling Meta or failing later.
+  describe 'Cloud-only features' do
+    let(:account) { create(:account).tap { |a| a.enable_features!('whatsapp_web') } }
+    let!(:channel) do
+      create(:channel_whatsapp, account: account, provider: 'baileys', provider_config: {}, sync_templates: false,
+                                message_templates_last_updated: nil, phone_number_health_checked_at: nil)
+    end
+    let(:inbox) { channel.inbox }
+
+    it 'is never picked by the phone number health sync' do
+      expect { Channels::Whatsapp::HealthSyncSchedulerJob.perform_now }.not_to have_enqueued_job(Channels::Whatsapp::HealthSyncJob)
+    end
+
+    it 'syncs templates without calling any API' do
+      freeze_time do
+        # A fresh instance: the factory stubs sync_templates on the created object.
+        Channels::Whatsapp::TemplatesSyncJob.perform_now(Channel::Whatsapp.find(channel.id))
+
+        expect(channel.reload.message_templates_last_updated).to eq(Time.zone.now)
+      end
+    end
+
+    it 'does not offer WhatsApp calling' do
+      expect(channel.voice_calling_supported?).to be(false)
+      expect { channel.enable_voice_calling! }.to raise_error(/requires a whatsapp_cloud inbox/)
+    end
+
+    it 'rejects contact information requests' do
+      expect { channel.send_contact_info_request('919876543210', nil) }.to raise_error(NotImplementedError)
+    end
+
+    it 'rejects the business management token' do
+      allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)
+
+      expect { Whatsapp::BusinessManagementTokenService.new(channel).update!('token') }
+        .to raise_error(ArgumentError, /only supported for WhatsApp Embedded Signup inboxes/)
+    end
+
+    describe 'inbox health endpoint', type: :request do
+      let(:admin) { create(:user, account: account, role: :administrator) }
+
+      it 'explains that health data needs the Cloud API' do
+        get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/health", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body['error']).to match(/only available for WhatsApp Cloud API/)
+      end
+    end
+
+    describe 'CSAT surveys' do
+      let(:contact) { create(:contact, account: account) }
+      let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: '919876543210') }
+      let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox) }
+
+      it 'sends the survey as a normal message instead of a template' do
+        inbox.update!(csat_survey_enabled: true)
+        # The customer's message first: an incoming message re-opens a resolved conversation.
+        create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :incoming)
+        conversation.resolved!
+        survey = instance_double(MessageTemplates::Template::CsatSurvey, perform: nil)
+        allow(MessageTemplates::Template::CsatSurvey).to receive(:new).and_return(survey)
+
+        CsatSurveyService.new(conversation: conversation).perform
+
+        expect(survey).to have_received(:perform)
+      end
+    end
+  end
 end
