@@ -1,7 +1,7 @@
 name: WaDesk CI
 
-# Runs on every pull request: lint, frontend tests, and the targeted backend suite
-# (all WhatsApp-related specs plus every spec file the PR adds or changes).
+# Runs on every pull request: lint, frontend tests, the targeted backend suite
+# (all WhatsApp-related specs plus every spec file the PR adds or changes), and the wadesk-engine checks.
 # The full Chatwoot suite is run manually via "Run Chatwoot CE spec".
 on:
   pull_request:
@@ -18,6 +18,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wadesk-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: wadesk-engine/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: wadesk-engine/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build image
+        run: docker build -t wadesk-engine:ci .
+
   lint-backend:
     runs-on: ubuntu-latest
     steps:
