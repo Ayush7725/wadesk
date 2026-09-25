@@ -24,6 +24,7 @@ Design: [docs/wadesk/02-architecture.md](../docs/wadesk/02-architecture.md) · D
 | `WADESK_ENGINE_LOG_LEVEL` | `info` | pino log level |
 | `WADESK_ENGINE_API_TOKEN` | — (required) | Bearer token Chatwoot uses for the session API; at least 32 characters |
 | `WADESK_ENGINE_ENCRYPTION_KEY` | — (required) | Base64 of 32 random bytes (`openssl rand -base64 32`); encrypts stored WhatsApp credentials. Changing it makes existing sessions unreadable (ADR-0004) |
+| `WADESK_ENGINE_WEBHOOK_SECRET` | — (required) | Shared secret for signing webhooks to Chatwoot; at least 32 characters |
 | `WADESK_ENGINE_DATABASE_URL` | — (required) | Postgres URL. The engine uses its own schema `wadesk_engine` and applies its migrations (`migrations/*.sql`) at startup under an advisory lock |
 
 ## API
@@ -37,6 +38,16 @@ All routes except `/health` need `Authorization: Bearer $WADESK_ENGINE_API_TOKEN
 | `POST /sessions/:id/pairing-code` | `{code}`; `409 not_pending` unless waiting to be linked |
 | `DELETE /sessions/:id` | `204` — logs out and wipes credentials |
 | `GET /health` | `{status: "ok"}` or `503` when the database is down |
+
+## Events to Chatwoot (outbox)
+
+Every event for Chatwoot is written to `wadesk_engine.outbox` first, then POSTed to the session's webhook URL with
+`X-WaDesk-Timestamp` and `X-WaDesk-Signature: sha256=HMAC(secret, "<timestamp>.<body>")`, and deleted on a 2xx.
+
+- **Order:** only the oldest pending event of a session is sent, so one number's events never arrive out of order.
+- **Retries:** exponential backoff (2 s, 4 s, … up to 10 min). Events still failing after 48 h are dropped and logged.
+- **Restarts / multiple instances:** undelivered events survive restarts; claims use a 60 s lease with
+  `FOR UPDATE SKIP LOCKED`, so parallel dispatchers never send the same event concurrently.
 
 ## Version notes
 

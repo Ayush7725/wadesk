@@ -194,7 +194,7 @@ available the message is still delivered with `wa_id` = LID and linked later whe
 | `wadesk_engine.sessions` | Engine | `id, expected_phone, webhook_url, state, me_jid, me_lid, updated_at` |
 | `wadesk_engine.auth_keys` | Engine | `session_id, key, value_encrypted` (Baileys creds + signal keys) |
 | `wadesk_engine.messages` | Engine | `session_id, message_id, meta_json, created_at` (30-day retention; no text bodies) |
-| `wadesk_engine.outbox` | Engine | `id, session_id, payload, attempts, next_attempt_at` |
+| `wadesk_engine.outbox` | Engine | `id, session_id, webhook_url, payload, attempts, next_attempt_at` (URL stored per event so final events survive session deletion) |
 | `wadesk_consent_events` (new table) | Chatwoot | `account_id, contact_id, kind (opt_in/opt_out), scope, source, evidence, recorded_by, created_at` — append-only (ADR-0006) |
 
 ## 6. Security

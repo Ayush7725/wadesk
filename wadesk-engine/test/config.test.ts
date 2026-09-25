@@ -5,6 +5,7 @@ const REQUIRED = {
   WADESK_ENGINE_DATABASE_URL: 'postgres://user@db:5432/engine',
   WADESK_ENGINE_API_TOKEN: 'a'.repeat(32),
   WADESK_ENGINE_ENCRYPTION_KEY: 'key',
+  WADESK_ENGINE_WEBHOOK_SECRET: 'b'.repeat(32),
 };
 
 describe('loadConfig', () => {
@@ -12,8 +13,8 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...REQUIRED, [name]: undefined })).toThrow(`${name} is required`);
   });
 
-  it('rejects short API tokens', () => {
-    expect(() => loadConfig({ ...REQUIRED, WADESK_ENGINE_API_TOKEN: 'short' })).toThrow('at least 32 characters');
+  it.each(['WADESK_ENGINE_API_TOKEN', 'WADESK_ENGINE_WEBHOOK_SECRET'])('rejects a short %s', (name) => {
+    expect(() => loadConfig({ ...REQUIRED, [name]: 'short' })).toThrow(`${name} must be at least 32 characters`);
   });
 
   it('uses defaults for optional values', () => {
@@ -24,6 +25,7 @@ describe('loadConfig', () => {
       databaseUrl: REQUIRED.WADESK_ENGINE_DATABASE_URL,
       apiToken: REQUIRED.WADESK_ENGINE_API_TOKEN,
       encryptionKey: 'key',
+      webhookSecret: REQUIRED.WADESK_ENGINE_WEBHOOK_SECRET,
     });
   });
 

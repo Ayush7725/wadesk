@@ -71,6 +71,7 @@ services:
       # Development-only secrets; production values come from the deployment's secret store.
       WADESK_ENGINE_API_TOKEN: wadesk-dev-engine-api-token-not-for-production
       WADESK_ENGINE_ENCRYPTION_KEY: ZGV2LW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
+      WADESK_ENGINE_WEBHOOK_SECRET: wadesk-dev-webhook-secret-not-for-production
     command: sh -c 'pnpm install --frozen-lockfile && pnpm dev'
     ports: ['127.0.0.1:4400:4000']
 
