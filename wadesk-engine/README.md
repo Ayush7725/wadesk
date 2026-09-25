@@ -29,3 +29,5 @@ Design: [docs/wadesk/02-architecture.md](../docs/wadesk/02-architecture.md) · D
 - **TypeScript is pinned to 6.0.x** because `typescript-eslint` 8.x does not yet support TypeScript 7 (peer range `<6.1`).
   Upgrade both together.
 - Dependencies are pinned to exact versions; upgrades go through dedicated PRs (Baileys especially — see ADR-0002).
+- pnpm skips dependency install scripts by default. For `baileys` (checks Node ≥ 20) and `protobufjs` (prints a
+  dependency-version warning) this is intended: neither builds or downloads anything.
