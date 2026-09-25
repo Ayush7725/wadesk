@@ -5,13 +5,3 @@ export class SessionNotFoundError extends Error {
     this.name = 'SessionNotFoundError';
   }
 }
-
-export class SessionStateError extends Error {
-  constructor(
-    readonly code: 'not_pending' | 'not_connected',
-    message: string,
-  ) {
-    super(message);
-    this.name = 'SessionStateError';
-  }
-}

@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionService } from '../../src/api/sessions.js';
 import { buildApp } from '../../src/app.js';
 import { createPool } from '../../src/db/pool.js';
-import { SessionNotFoundError, SessionStateError } from '../../src/sessions/errors.js';
+import { SessionNotFoundError } from '../../src/sessions/errors.js';
 import { API_TOKEN, AUTH } from '../support/app.js';
 import { databaseUrl } from '../support/db.js';
 
@@ -15,7 +15,7 @@ describe('session API', () => {
   const body = { phone_number: '919812345678', webhook_url: 'http://chatwoot:3000/webhooks/whatsapp_web/12' };
 
   beforeEach(() => {
-    sessions = { upsert: vi.fn(), get: vi.fn(), requestPairingCode: vi.fn(), remove: vi.fn() };
+    sessions = { upsert: vi.fn(), get: vi.fn(), remove: vi.fn() };
   });
 
   it.each([undefined, 'Bearer wrong-token', API_TOKEN])('rejects requests with authorization %s', async (authorization) => {
@@ -38,7 +38,7 @@ describe('session API', () => {
 
     expect(response.statusCode).toBe(202);
     expect(response.json()).toEqual({ state: 'connecting' });
-    expect(sessions.upsert).toHaveBeenCalledWith('12', '919812345678', body.webhook_url);
+    expect(sessions.upsert).toHaveBeenCalledWith('12', '919812345678', body.webhook_url, 'qr');
   });
 
   it.each([
@@ -47,6 +47,7 @@ describe('session API', () => {
     ['a non-http webhook', { ...body, webhook_url: 'ftp://chatwoot/x' }],
     ['unknown fields', { ...body, extra: true }],
     ['a missing webhook', { phone_number: body.phone_number }],
+    ['an unknown link method', { ...body, link_method: 'sms' }],
   ])('rejects %s with 422', async (_name, payload) => {
     const response = await app().inject({ method: 'PUT', url: '/sessions/12', headers: AUTH, payload });
 
@@ -77,21 +78,20 @@ describe('session API', () => {
     expect(response.json()).toEqual({ error: { code: 'session_not_found', message: 'Session 12 not found' } });
   });
 
-  it('returns a pairing code', async () => {
-    sessions.requestPairingCode.mockResolvedValue('ABCD1234');
+  it('accepts the pairing-code link method', async () => {
+    sessions.upsert.mockResolvedValue({ state: 'connecting' });
 
-    const response = await app().inject({ method: 'POST', url: '/sessions/12/pairing-code', headers: AUTH });
+    await app().inject({ method: 'PUT', url: '/sessions/12', headers: AUTH, payload: { ...body, link_method: 'code' } });
 
-    expect(response.json()).toEqual({ code: 'ABCD1234' });
+    expect(sessions.upsert).toHaveBeenCalledWith('12', '919812345678', body.webhook_url, 'code');
   });
 
-  it('returns 409 when a pairing code is requested at the wrong time', async () => {
-    sessions.requestPairingCode.mockRejectedValue(new SessionStateError('not_pending', 'not waiting'));
+  it('returns the current pairing code in code mode', async () => {
+    sessions.get.mockResolvedValue({ state: 'qr_pending', pairingCode: 'ABCD1234' });
 
-    const response = await app().inject({ method: 'POST', url: '/sessions/12/pairing-code', headers: AUTH });
+    const response = await app().inject({ method: 'GET', url: '/sessions/12', headers: AUTH });
 
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toEqual({ error: { code: 'not_pending', message: 'not waiting' } });
+    expect(response.json()).toEqual({ state: 'qr_pending', pairing_code: 'ABCD1234' });
   });
 
   it('deletes a session', async () => {

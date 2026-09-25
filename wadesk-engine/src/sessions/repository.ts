@@ -1,10 +1,11 @@
 import type { Pool } from '../db/pool.js';
-import type { SessionRecord, SessionState } from './types.js';
+import type { LinkMethod, SessionRecord, SessionState } from './types.js';
 
 interface Row {
   id: string;
   expected_phone: string;
   webhook_url: string;
+  link_method: LinkMethod;
   state: SessionState;
   me_jid: string | null;
   me_lid: string | null;
@@ -15,6 +16,7 @@ const toRecord = (row: Row): SessionRecord => ({
   id: row.id,
   expectedPhone: row.expected_phone,
   webhookUrl: row.webhook_url,
+  linkMethod: row.link_method,
   state: row.state,
   meJid: row.me_jid,
   meLid: row.me_lid,
@@ -24,12 +26,13 @@ const toRecord = (row: Row): SessionRecord => ({
 export class SessionRepository {
   constructor(private readonly pool: Pool) {}
 
-  async upsert(id: string, expectedPhone: string, webhookUrl: string): Promise<SessionRecord> {
+  async upsert(id: string, expectedPhone: string, webhookUrl: string, linkMethod: LinkMethod): Promise<SessionRecord> {
     const { rows } = await this.pool.query<Row>(
-      `INSERT INTO wadesk_engine.sessions (id, expected_phone, webhook_url) VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO UPDATE SET expected_phone = EXCLUDED.expected_phone, webhook_url = EXCLUDED.webhook_url, updated_at = now()
+      `INSERT INTO wadesk_engine.sessions (id, expected_phone, webhook_url, link_method) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET expected_phone = EXCLUDED.expected_phone, webhook_url = EXCLUDED.webhook_url,
+         link_method = EXCLUDED.link_method, updated_at = now()
        RETURNING *`,
-      [id, expectedPhone, webhookUrl],
+      [id, expectedPhone, webhookUrl, linkMethod],
     );
     return toRecord(rows[0] as Row);
   }

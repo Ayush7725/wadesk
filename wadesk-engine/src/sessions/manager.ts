@@ -1,6 +1,6 @@
 import { SessionNotFoundError } from './errors.js';
 import { Session, type SessionDeps, type SessionSnapshot } from './session.js';
-import type { SessionRecord } from './types.js';
+import type { LinkMethod, SessionRecord } from './types.js';
 
 const LIVE_STATES = new Set(['connecting', 'qr_pending', 'connected']);
 
@@ -19,11 +19,17 @@ export class SessionManager {
     }
   }
 
-  // Creates or restarts a session. Idempotent while the same number is live (WW-FR-01/06).
-  async upsert(id: string, expectedPhone: string, webhookUrl: string): Promise<SessionSnapshot> {
+  // Creates or restarts a session. Idempotent while the same number is live with the same link method,
+  // and while connected (the link method only matters until the number is linked) (WW-FR-01/03/06).
+  async upsert(id: string, expectedPhone: string, webhookUrl: string, linkMethod: LinkMethod): Promise<SessionSnapshot> {
     const running = this.sessions.get(id);
-    if (running && running.expectedPhone === expectedPhone && LIVE_STATES.has(running.currentState)) {
-      await this.deps.repository.upsert(id, expectedPhone, webhookUrl);
+    if (
+      running &&
+      running.expectedPhone === expectedPhone &&
+      LIVE_STATES.has(running.currentState) &&
+      (running.linkMethod === linkMethod || running.currentState === 'connected')
+    ) {
+      await this.deps.repository.upsert(id, expectedPhone, webhookUrl, running.linkMethod);
       return running.snapshot();
     }
 
@@ -37,7 +43,7 @@ export class SessionManager {
     if (existing && existing.expectedPhone !== expectedPhone) {
       await this.deps.repository.delete(id); // credentials belong to the old number
     }
-    const record = await this.deps.repository.upsert(id, expectedPhone, webhookUrl);
+    const record = await this.deps.repository.upsert(id, expectedPhone, webhookUrl, linkMethod);
     return (await this.launch(record)).snapshot();
   }
 
@@ -48,12 +54,6 @@ export class SessionManager {
     const record = await this.deps.repository.find(id);
     if (!record) throw new SessionNotFoundError(id);
     return { state: record.state, ...(record.lastError ? { lastError: record.lastError } : {}) };
-  }
-
-  async requestPairingCode(id: string): Promise<string> {
-    const running = this.sessions.get(id);
-    if (!running) throw new SessionNotFoundError(id);
-    return running.requestPairingCode();
   }
 
   // Logs out and wipes the session and its credentials (WW-FR-07).

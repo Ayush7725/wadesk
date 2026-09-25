@@ -1,6 +1,6 @@
 # 04 — Requirements: WhatsApp Safety Layer
 
-**Status:** Draft — change request CR-001, awaiting approval · **Last updated:** 2026-09-25 · Decision: [ADR-0006](adr/0006-whatsapp-safety-layer.md)
+**Status:** Approved (CR-001, 2026-09-25) · **Last updated:** 2026-09-25 · Decision: [ADR-0006](adr/0006-whatsapp-safety-layer.md)
 
 ## 1. Goal
 

@@ -1,9 +1,13 @@
+// How the admin links the number: scan a QR code, or type a pairing code on the phone (for phone-only owners).
+export type LinkMethod = 'qr' | 'code';
+
 export type SessionState = 'connecting' | 'qr_pending' | 'connected' | 'disconnected' | 'logged_out' | 'failed';
 
 export interface SessionRecord {
   id: string;
   expectedPhone: string;
   webhookUrl: string;
+  linkMethod: LinkMethod;
   state: SessionState;
   meJid: string | null;
   meLid: string | null;

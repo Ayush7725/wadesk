@@ -2,9 +2,8 @@ import { DisconnectReason, jidDecode, type ConnectionState } from 'baileys';
 import type { Logger } from 'pino';
 import type { PostgresAuthState } from '../auth/postgres-auth-state.js';
 import type { SocketFactory, WaSocket } from '../whatsapp/socket.js';
-import { SessionStateError } from './errors.js';
 import type { SessionRepository } from './repository.js';
-import type { ConnectionEvent, EventSink, SessionRecord, SessionState } from './types.js';
+import type { ConnectionEvent, EventSink, LinkMethod, SessionRecord, SessionState } from './types.js';
 
 export interface SessionTiming {
   baseBackoffMs: number;
@@ -26,6 +25,7 @@ export interface SessionDeps {
 export interface SessionSnapshot {
   state: SessionState;
   qr?: string;
+  pairingCode?: string;
   me?: { phone: string };
   lastError?: string;
 }
@@ -39,6 +39,7 @@ export class Session {
   private socket: WaSocket | undefined;
   private auth: PostgresAuthState | undefined;
   private qr: string | undefined;
+  private pairingCode: string | undefined;
   private qrDeadline: number | undefined;
   private attempts = 0;
   private credsSaving: Promise<void> = Promise.resolve();
@@ -64,6 +65,10 @@ export class Session {
     return this.record.expectedPhone;
   }
 
+  get linkMethod(): LinkMethod {
+    return this.record.linkMethod;
+  }
+
   get currentState(): SessionState {
     return this.state;
   }
@@ -71,7 +76,8 @@ export class Session {
   snapshot(): SessionSnapshot {
     return {
       state: this.state,
-      ...(this.state === 'qr_pending' && this.qr ? { qr: this.qr } : {}),
+      ...(this.state === 'qr_pending' && this.record.linkMethod === 'qr' && this.qr ? { qr: this.qr } : {}),
+      ...(this.state === 'qr_pending' && this.pairingCode ? { pairingCode: this.pairingCode } : {}),
       ...(this.mePhone ? { me: { phone: this.mePhone } } : {}),
       ...(this.lastError ? { lastError: this.lastError } : {}),
     };
@@ -82,13 +88,6 @@ export class Session {
     this.lastError = undefined;
     await this.transition('connecting');
     await this.connect();
-  }
-
-  async requestPairingCode(): Promise<string> {
-    if (this.state !== 'qr_pending' || !this.socket) {
-      throw new SessionStateError('not_pending', 'A pairing code can only be requested while the session is waiting to be linked');
-    }
-    return this.socket.requestPairingCode(this.record.expectedPhone);
   }
 
   // Unlinks the device from the phone. Credentials are removed with the session row by the manager.
@@ -116,8 +115,9 @@ export class Session {
     const auth = await this.deps.createAuthState(this.id);
     if (this.stopped) return;
     this.auth = auth;
-    const socket = this.deps.createSocket(auth.state, this.deps.logger);
+    const socket = this.deps.createSocket(auth.state, this.deps.logger, this.record.linkMethod);
     this.socket = socket;
+    this.pairingCode = undefined; // a pairing code is only valid on the connection that requested it
 
     // Saves run one at a time and stop once the socket is gone, so a late save can never
     // bring back credentials that were just wiped.
@@ -141,6 +141,10 @@ export class Session {
     if (update.qr) {
       this.qr = update.qr;
       this.qrDeadline ??= Date.now() + this.deps.timing.qrTimeoutMs;
+      // Code mode: one code per connection, requested automatically so the admin always sees a valid one.
+      if (this.record.linkMethod === 'code' && !this.pairingCode) {
+        this.pairingCode = await socket.requestPairingCode(this.record.expectedPhone);
+      }
       await this.transition('qr_pending');
     }
     if (update.connection === 'open') await this.onOpen(socket);
@@ -150,6 +154,7 @@ export class Session {
   private async onOpen(socket: WaSocket): Promise<void> {
     const phone = jidDecode(socket.user?.id)?.user;
     this.qr = undefined;
+    this.pairingCode = undefined;
     this.qrDeadline = undefined;
 
     if (phone !== this.record.expectedPhone) {
@@ -172,7 +177,11 @@ export class Session {
     this.socket = undefined;
     if (this.stopped) return;
 
-    if (code === DisconnectReason.loggedOut) {
+    if (code === DisconnectReason.loggedOut && this.state === 'qr_pending') {
+      // Never linked, so nothing was unlinked: WhatsApp closes an expired pairing-code attempt with 401.
+      // Drop the half-registered credentials and retry below with a fresh connection (and code).
+      await this.forgetCredentials();
+    } else if (code === DisconnectReason.loggedOut) {
       this.stopped = true;
       await this.forgetCredentials();
       await this.transition('logged_out', { reason: 'unlinked_from_phone', lastError: 'unlinked_from_phone' });
@@ -195,8 +204,13 @@ export class Session {
     }
 
     if (this.state === 'connected') await this.transition('disconnected', { reason: 'connection_lost' });
-    const delay = Math.min(this.deps.timing.baseBackoffMs * 2 ** this.attempts, this.deps.timing.maxBackoffMs);
-    this.attempts += 1;
+    // While waiting to be linked, WhatsApp routinely ends QR/code attempts: reconnect promptly with a fresh one.
+    // Real connection failures back off exponentially.
+    const waitingToLink = this.state === 'qr_pending';
+    const delay = waitingToLink
+      ? this.deps.timing.baseBackoffMs
+      : Math.min(this.deps.timing.baseBackoffMs * 2 ** this.attempts, this.deps.timing.maxBackoffMs);
+    if (!waitingToLink) this.attempts += 1;
     this.reconnectTimer = setTimeout(() => {
       this.connect().catch((error: unknown) => this.deps.logger.error({ err: error }, 'reconnect failed'));
     }, delay);
