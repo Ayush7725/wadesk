@@ -7,8 +7,10 @@ Tasks are delivered as one branch + one PR each, following the Definition of Don
 
 ## Milestones
 
-### M0 — Foundations
+### M0 — Foundations ✅
 Goal: a working, repeatable engineering setup before any feature code.
+
+**Status:** complete 2026-09-25 — M0.1/M0.2 on `main`, M0.3 (#2), M0.4 (#1), engine in dev stack (#3).
 
 | Task | Output |
 |---|---|
