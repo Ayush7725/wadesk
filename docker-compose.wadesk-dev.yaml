@@ -68,6 +68,9 @@ services:
       <<: *env
       # Same database as Chatwoot dev, own schema `wadesk_engine` (ADR-0004).
       WADESK_ENGINE_DATABASE_URL: postgres://postgres@db:5432/chatwoot_dev
+      # Development-only secrets; production values come from the deployment's secret store.
+      WADESK_ENGINE_API_TOKEN: wadesk-dev-engine-api-token-not-for-production
+      WADESK_ENGINE_ENCRYPTION_KEY: ZGV2LW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
     command: sh -c 'pnpm install --frozen-lockfile && pnpm dev'
     ports: ['127.0.0.1:4400:4000']
 
