@@ -6,7 +6,7 @@
 #   bin/wadesk-dev rubocop [args...]      lint Ruby
 #   bin/wadesk-dev pnpm <args...>         run pnpm (e.g. `pnpm test`, `pnpm eslint`)
 #   bin/wadesk-dev sh                     shell inside the toolbox
-#   bin/wadesk-dev server                 run Chatwoot dev server on http://localhost:3300
+#   bin/wadesk-dev server                 run Chatwoot (http://localhost:3300) + engine (http://localhost:4400)
 #   bin/wadesk-dev down                   stop everything (data volumes are kept)
 #   bin/wadesk-dev pre-commit             Chatwoot's pre-commit checks (.husky/pre-commit), run in the toolbox
 #
@@ -23,23 +23,25 @@ if [ -z "${DOCKER_HOST:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/podman/po
   export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
 fi
 compose() { docker compose -f docker-compose.wadesk-dev.yaml "$@"; }
+# Tests use their own Redis database so the dev worker never picks up jobs enqueued by specs.
+TEST_ENV=(-e RAILS_ENV=test -e REDIS_URL=redis://redis:6379/1)
 run() { compose up -d --wait toolbox >/dev/null && compose exec -T "$@"; }
 
 cmd="${1:-help}"; shift || true
 case "$cmd" in
   setup)
     compose build toolbox
-    run toolbox sh -c 'bundle install --jobs 4 && pnpm install --frozen-lockfile'
+    run toolbox sh -c 'bundle install --jobs 4 && pnpm install --frozen-lockfile && pnpm --dir wadesk-engine install --frozen-lockfile'
     run -e RAILS_ENV=development toolbox bundle exec rails db:prepare
-    run -e RAILS_ENV=test toolbox bundle exec rails db:prepare
+    run "${TEST_ENV[@]}" toolbox bundle exec rails db:prepare
     # pnpm install points git at .husky, whose hook needs Node/Ruby on the host; use the toolbox wrapper instead.
     git config core.hooksPath .githooks
     ;;
-  rspec)   run -e RAILS_ENV=test toolbox bundle exec rspec "$@" ;;
+  rspec)   run "${TEST_ENV[@]}" toolbox bundle exec rspec "$@" ;;
   rubocop) run toolbox bundle exec rubocop "$@" ;;
   pnpm)    run toolbox pnpm "$@" ;;
   sh)      compose up -d --wait toolbox >/dev/null && compose exec toolbox bash ;;
-  server)  compose --profile app up web worker vite ;;
+  server)  compose --profile app up web worker vite engine ;;
   down)    compose --profile app down ;;
   pre-commit) run toolbox sh .husky/pre-commit ;;
   *)       sed -n '2,13p' "$0" ;;
