@@ -16,7 +16,9 @@ import { fakeSocketFactory } from '../support/fake-socket.js';
 const PHONE = '919812345678';
 const OTHER_PHONE = '919800000000';
 const WEBHOOK = 'http://chatwoot/webhooks/whatsapp_web/1';
-const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 150 };
+// Long QR limit by default so slow CI runners never hit it by accident; QR-expiry tests use SHORT_QR explicitly.
+const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 60_000 };
+const SHORT_QR: SessionTiming = { ...FAST, qrTimeoutMs: 150 };
 // Generous timeout: these steps take milliseconds, but a busy CI runner or laptop can stall the database briefly.
 const eventually = <T>(assertion: () => T | Promise<T>) => vi.waitFor(assertion, { timeout: 5_000, interval: 10 });
 
@@ -27,7 +29,7 @@ describe('SessionManager', () => {
   let events: { sessionId: string; event: ConnectionEvent }[];
   let managers: SessionManager[];
 
-  const build = (overrides: { failAuthFor?: string } = {}) => {
+  const build = (overrides: { failAuthFor?: string; timing?: SessionTiming } = {}) => {
     const { factory, sockets } = fakeSocketFactory();
     const sink = events; // bound now, so late events from an earlier test never leak into this one
     const manager = new SessionManager({
@@ -42,7 +44,7 @@ describe('SessionManager', () => {
         },
       },
       logger: pino({ level: 'silent' }),
-      timing: FAST,
+      timing: overrides.timing ?? FAST,
     });
     managers.push(manager);
     return { manager, sockets };
@@ -247,12 +249,12 @@ describe('SessionManager', () => {
   });
 
   it('stops offering QR codes after the QR timeout', async () => {
-    const { manager, sockets } = build();
+    const { manager, sockets } = build({ timing: SHORT_QR });
     await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
-    await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
+    await new Promise((resolve) => setTimeout(resolve, SHORT_QR.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
 
     await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'disconnected', lastError: 'qr_expired' }));
@@ -303,10 +305,10 @@ describe('SessionManager', () => {
   });
 
   it('reconnects a dropped session with its stored credentials instead of unlinking it', async () => {
-    const { manager, sockets } = build();
+    const { manager, sockets } = build({ timing: SHORT_QR });
     await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
-    await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
+    await new Promise((resolve) => setTimeout(resolve, SHORT_QR.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('disconnected'));
 
