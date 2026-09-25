@@ -1,4 +1,5 @@
-import type { ConnectionState } from 'baileys';
+import { Readable } from 'node:stream';
+import type { ConnectionState, MessageUpsertType, WAMessage } from 'baileys';
 import type { LinkMethod } from '../../src/sessions/types.js';
 import type { SocketFactory, WaSocket } from '../../src/whatsapp/socket.js';
 
@@ -11,6 +12,9 @@ export class FakeSocket implements WaSocket {
   constructor(readonly linkMethod: LinkMethod) {}
   private connectionListeners: ((update: Partial<ConnectionState>) => void)[] = [];
   private credsListeners: (() => void)[] = [];
+  private messageListeners: ((messages: WAMessage[], type: MessageUpsertType) => void)[] = [];
+  downloads: WAMessage[] = [];
+  failDownloads = false;
 
   onConnectionUpdate(listener: (update: Partial<ConnectionState>) => void): void {
     this.connectionListeners.push(listener);
@@ -18,6 +22,20 @@ export class FakeSocket implements WaSocket {
 
   onCredsUpdate(listener: () => void): void {
     this.credsListeners.push(listener);
+  }
+
+  onMessagesUpsert(listener: (messages: WAMessage[], type: MessageUpsertType) => void): void {
+    this.messageListeners.push(listener);
+  }
+
+  downloadMedia(message: WAMessage): Promise<Readable> {
+    if (this.failDownloads) return Promise.reject(new Error('media expired'));
+    this.downloads.push(message);
+    return Promise.resolve(Readable.from([Buffer.from(`media:${message.key.id ?? ''}`)]));
+  }
+
+  receive(messages: WAMessage[], type: MessageUpsertType = 'notify'): void {
+    for (const listener of this.messageListeners) listener(messages, type);
   }
 
   requestPairingCode(phoneNumber: string): Promise<string> {

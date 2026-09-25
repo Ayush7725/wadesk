@@ -13,6 +13,9 @@ class Webhooks::WhatsappWebController < ActionController::API
 
     case payload['event']
     when 'connection' then WhatsappWeb::ConnectionUpdateService.new(channel: channel, payload: payload).perform
+    # Same pipeline as the other WhatsApp providers (payloads use the Cloud API message shape, ADR-0003).
+    # The job locks per sender and finds the channel by its phone number.
+    when 'messages' then Webhooks::WhatsappEventsJob.perform_later(payload.with_indifferent_access.merge(phone_number: channel.phone_number))
     else return render json: { error: "Unsupported event: #{payload['event']}" }, status: :unprocessable_entity
     end
     head :ok

@@ -2,7 +2,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionService } from '../../src/api/sessions.js';
 import { buildApp } from '../../src/app.js';
 import { createPool } from '../../src/db/pool.js';
-import { SessionNotFoundError } from '../../src/sessions/errors.js';
+import { Readable } from 'node:stream';
+import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../../src/sessions/errors.js';
 import { API_TOKEN, AUTH } from '../support/app.js';
 import { databaseUrl } from '../support/db.js';
 
@@ -15,7 +16,7 @@ describe('session API', () => {
   const body = { phone_number: '919812345678', webhook_url: 'http://chatwoot:3000/webhooks/whatsapp_web/12' };
 
   beforeEach(() => {
-    sessions = { upsert: vi.fn(), get: vi.fn(), remove: vi.fn() };
+    sessions = { upsert: vi.fn(), get: vi.fn(), downloadMedia: vi.fn(), remove: vi.fn() };
   });
 
   it.each([undefined, 'Bearer wrong-token', API_TOKEN])('rejects requests with authorization %s', async (authorization) => {
@@ -92,6 +93,44 @@ describe('session API', () => {
     const response = await app().inject({ method: 'GET', url: '/sessions/12', headers: AUTH });
 
     expect(response.json()).toEqual({ state: 'qr_pending', pairing_code: 'ABCD1234' });
+  });
+
+  it('streams media with its content type and file name', async () => {
+    sessions.downloadMedia.mockResolvedValue({
+      stream: Readable.from([Buffer.from('%PDF')]),
+      message: { key: { id: 'D1' }, message: { documentMessage: { mimetype: 'application/pdf', fileName: 'floor plan.pdf' } } },
+    });
+
+    const response = await app().inject({ method: 'GET', url: '/sessions/12/media/D1', headers: AUTH });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/pdf');
+    expect(response.headers['content-disposition']).toBe("attachment; filename*=UTF-8''floor%20plan.pdf");
+    expect(response.body).toBe('%PDF');
+    expect(sessions.downloadMedia).toHaveBeenCalledWith('12', 'D1');
+  });
+
+  it('names media without a file name after the message and type', async () => {
+    sessions.downloadMedia.mockResolvedValue({
+      stream: Readable.from([Buffer.from('x')]),
+      message: { key: { id: 'V1' }, message: { audioMessage: { mimetype: 'audio/ogg; codecs=opus' } } },
+    });
+
+    const response = await app().inject({ method: 'GET', url: '/sessions/12/media/V1', headers: AUTH });
+
+    expect(response.headers['content-disposition']).toBe("attachment; filename*=UTF-8''V1.ogg");
+  });
+
+  it.each([
+    [new MediaNotFoundError('X1'), 404, 'media_not_found'],
+    [new MediaUnavailableError('X1', new Error('expired')), 502, 'media_unavailable'],
+  ])('maps %s to a clear error', async (error, status, code) => {
+    sessions.downloadMedia.mockRejectedValue(error);
+
+    const response = await app().inject({ method: 'GET', url: '/sessions/12/media/X1', headers: AUTH });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toMatchObject({ error: { code } });
   });
 
   it('deletes a session', async () => {

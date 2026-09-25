@@ -56,6 +56,12 @@ export class SessionManager {
     return { state: record.state, ...(record.lastError ? { lastError: record.lastError } : {}) };
   }
 
+  async downloadMedia(id: string, messageId: string) {
+    const running = this.sessions.get(id);
+    if (!running) throw new SessionNotFoundError(id);
+    return running.downloadMedia(messageId);
+  }
+
   // Logs out and wipes the session and its credentials (WW-FR-07).
   async remove(id: string): Promise<void> {
     const running = this.sessions.get(id);

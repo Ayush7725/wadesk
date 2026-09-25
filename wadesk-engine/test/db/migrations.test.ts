@@ -30,7 +30,7 @@ describe('engine migrations', () => {
   it('deletes a session with its credentials and messages but keeps outbox events', async () => {
     await pool.query("INSERT INTO wadesk_engine.sessions (id, expected_phone, webhook_url) VALUES ('s1', '919800000000', 'http://x')");
     await pool.query("INSERT INTO wadesk_engine.auth_keys (session_id, category, key_id, value) VALUES ('s1', 'creds', '', '\\x00')");
-    await pool.query("INSERT INTO wadesk_engine.messages (session_id, message_id, meta) VALUES ('s1', 'm1', '{}')");
+    await pool.query("INSERT INTO wadesk_engine.messages (session_id, message_id, payload) VALUES ('s1', 'm1', '\\x00')");
     await pool.query("INSERT INTO wadesk_engine.outbox (session_id, webhook_url, payload) VALUES ('s1', 'http://x', '{}')");
 
     await pool.query("DELETE FROM wadesk_engine.sessions WHERE id = 's1'");
