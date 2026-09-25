@@ -11,7 +11,7 @@ Design: [docs/wadesk/02-architecture.md](../docs/wadesk/02-architecture.md) · D
 |---|---|
 | `pnpm install` | Install dependencies (own lockfile; not part of Chatwoot's pnpm project) |
 | `pnpm dev` | Run with reload on `WADESK_ENGINE_PORT` (default 4000) |
-| `pnpm test` | Unit tests (Vitest) |
+| `pnpm test` | Tests (Vitest) against a real Postgres; creates the test DB on first run. Locally: `bin/wadesk-dev engine test` |
 | `pnpm lint` / `pnpm typecheck` | ESLint (typescript-eslint strict) / `tsc --noEmit` |
 | `pnpm build` && `pnpm start` | Production build and start |
 
@@ -22,6 +22,7 @@ Design: [docs/wadesk/02-architecture.md](../docs/wadesk/02-architecture.md) · D
 | `WADESK_ENGINE_PORT` | `4000` | HTTP port |
 | `WADESK_ENGINE_HOST` | `0.0.0.0` | Bind address (container network only) |
 | `WADESK_ENGINE_LOG_LEVEL` | `info` | pino log level |
+| `WADESK_ENGINE_DATABASE_URL` | — (required) | Postgres URL. The engine uses its own schema `wadesk_engine` and applies its migrations (`migrations/*.sql`) at startup under an advisory lock |
 
 ## Version notes
 
