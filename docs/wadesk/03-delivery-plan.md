@@ -55,10 +55,13 @@ Covers WW-FR-20, 21, 22, 23, 24, 25
 
 | Task | Output |
 |---|---|
-| M3.1 Engine `POST /sessions/:id/messages` (text, one file, quoted reply) with send pacing | API tests |
+| M3.1 Engine `POST /sessions/:id/messages` (text, one file, quoted reply) with per-session rate limit (SAFE-FR-03) | API tests |
 | M3.2 `WhatsappBaileysService#send_message` + error mapping to `external_error` | Provider specs (WebMock) |
 | M3.3 Receipts → `statuses` webhook → `Messages::StatusUpdateService` | Normalizer + service specs |
 | M3.4 Remove 24h window for `baileys`; new-conversation-by-phone works | Specs |
+| M3.5 Daily business-initiated chat cap for Web inboxes (SAFE-FR-02) | Service + request specs |
+| M3.6 Block campaigns/bulk on `baileys` inboxes at the API boundary (SAFE-FR-01) | Request specs |
+| M3.7 Opt-out keyword detection, consent events table, private note (SAFE-FR-10/11) | Model/service specs incl. Hindi/Hinglish and no-partial-match cases |
 
 **Acceptance:** agent replies (text, image, PDF, quoted reply) arrive on the customer phone; ticks progress
 sent → delivered → read; sending while disconnected shows a clear failure; replying after 24h works.
@@ -72,6 +75,7 @@ Covers WW-FR-01, 02, 03, 05, 06, 08 (UI), 30 (UI), WW-NFR-10
 | M4.2 Creation form + live QR / pairing-code panel with state updates | Vue components + vitest |
 | M4.3 Inbox settings: connection panel (state, reconnect, log out) | Vue components + vitest |
 | M4.4 In-app notification to admins on `logged_out` / `disconnected` | Spec |
+| M4.5 Connection-type badge (Official / Web) on inbox list, settings and conversation header (SAFE-FR-04) | Vue components + vitest |
 
 **Acceptance:** an admin with the flag connects a number end-to-end in the browser without curl; an account without
 the flag cannot see or create the channel (UI and API).
@@ -111,5 +115,8 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 | Staging (VPS, later) | Soak tests and customer demos before Step 2 go-live |
 
 ## Out of this plan (next steps)
-Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding.
-Step 3+: groups, Status, number checker, profile, call auto-reject, history import, AI transcription.
+Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
+opt-in capture, campaign audience filtering and review, campaign permission, audit log — [04-safety-requirements.md](04-safety-requirements.md)).
+Step 2 also re-plans with Step 3 items below; the bulk number checker is dropped (looks like contact harvesting).
+Step 3+: groups, Status, profile, call auto-reject, history import, AI transcription; safety S3 (WhatsApp Health view with
+Meta quality rating, safety events).

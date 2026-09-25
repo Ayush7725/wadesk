@@ -69,7 +69,7 @@ Priority: **M** = must for Step 1, **S** = should (in Step 1 if time allows), **
 | WW-FR-22 | An agent can reply to a specific customer message (quoted reply). | M |
 | WW-FR-23 | Outgoing messages show status ticks: sent → delivered → read, or failed with a readable reason. | M |
 | WW-FR-24 | The Official channel's 24-hour reply window and template requirement do **not** apply to WhatsApp Web inboxes. | M |
-| WW-FR-25 | An agent can start a new conversation with a contact by phone number from WaDesk. | S |
+| WW-FR-25 | An agent can start a new conversation with a contact by phone number from WaDesk, subject to the daily business-initiated chat cap (SAFE-FR-02). | S |
 
 ### 4.4 Administration
 
@@ -93,6 +93,11 @@ Priority: **M** = must for Step 1, **S** = should (in Step 1 if time allows), **
 | WW-NFR-09 | Operability | Engine exposes health and basic metrics (sessions by state, messages in/out, errors). |
 | WW-NFR-10 | Compliance | The inbox creation screen tells the admin that WhatsApp Web is unofficial and may lead to number bans if used for bulk messaging; the admin must acknowledge before connecting. |
 
+### 5.1 Safety requirements in Step 1 (CR-001)
+
+Step 1 also delivers the S1 items of [04-safety-requirements.md](04-safety-requirements.md): SAFE-FR-01 to 05
+(no bulk on Web, new-chat cap, rate limit, connection-type labels, no detection evasion) and SAFE-FR-10/11 (opt-out capture).
+
 ## 6. Constraints and assumptions
 
 - WhatsApp Web access is via the open-source **Baileys** library (MIT). It is unofficial and may break when
@@ -108,3 +113,10 @@ Priority: **M** = must for Step 1, **S** = should (in Step 1 if time allows), **
 3. A 72-hour soak test with at least 2 real test numbers shows no lost or duplicated messages and automatic recovery
    from forced engine restarts.
 4. The demo environment runs with Evolution API removed.
+
+## Change log
+
+| Date | Change | Ref |
+|---|---|---|
+| 2026-09-25 | Approved at Gate A | — |
+| 2026-09-25 | Safety layer: Web is conversations-only, new-chat cap on WW-FR-25, S1 safety items added (§5.1) | CR-001, ADR-0006 |
