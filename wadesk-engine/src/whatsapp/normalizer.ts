@@ -6,8 +6,9 @@ import {
   isJidStatusBroadcast,
   jidDecode,
   normalizeMessageContent,
-  type proto,
+  proto,
   type WAMessage,
+  type WAMessageUpdate,
 } from 'baileys';
 
 // Payload shapes sent to Chatwoot. They follow the WhatsApp Cloud API webhook format that Chatwoot's
@@ -31,6 +32,13 @@ export interface MessagesEvent {
   event: 'messages';
   contacts: IncomingContact[];
   messages: IncomingMessage[];
+}
+
+export type DeliveryStatus = 'sent' | 'delivered' | 'read' | 'failed';
+
+export interface StatusesEvent {
+  event: 'statuses';
+  statuses: [{ id: string; status: DeliveryStatus; recipient_id: string }];
 }
 
 // Message kinds that carry no conversation content for the inbox.
@@ -164,4 +172,25 @@ export function normalizeIncoming(message: WAMessage): MessagesEvent | undefined
       },
     ],
   };
+}
+
+const DELIVERY_STATUSES: Partial<Record<proto.WebMessageInfo.Status, DeliveryStatus>> = {
+  [proto.WebMessageInfo.Status.ERROR]: 'failed',
+  [proto.WebMessageInfo.Status.SERVER_ACK]: 'sent',
+  [proto.WebMessageInfo.Status.DELIVERY_ACK]: 'delivered',
+  [proto.WebMessageInfo.Status.READ]: 'read',
+  [proto.WebMessageInfo.Status.PLAYED]: 'read', // voice notes: played implies read
+};
+
+// Converts a receipt for one of the business's own 1:1 messages into a Chatwoot "statuses" event (WW-FR-23).
+// One status per event: Chatwoot applies only the first status of each event.
+export function normalizeStatus({ key, update }: WAMessageUpdate): StatusesEvent | undefined {
+  const jid = key.remoteJid;
+  if (!jid || !key.id || !key.fromMe || !isCustomerChat(jid) || update.status == null) return undefined;
+
+  const status = DELIVERY_STATUSES[update.status];
+  const recipient = phoneOf(jid) ?? phoneOf(key.remoteJidAlt) ?? lidOf(jid);
+  if (!status || !recipient) return undefined;
+
+  return { event: 'statuses', statuses: [{ id: key.id, status, recipient_id: recipient }] };
 }

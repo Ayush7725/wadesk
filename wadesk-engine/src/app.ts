@@ -6,6 +6,7 @@ export interface AppDeps {
   pool: Pool;
   sessions: SessionService;
   apiToken: string;
+  uploadDeadlineMs?: number;
 }
 
 export function buildApp(deps: AppDeps, options: FastifyServerOptions = {}): FastifyInstance {
@@ -22,7 +23,7 @@ export function buildApp(deps: AppDeps, options: FastifyServerOptions = {}): Fas
     }
   });
 
-  registerSessionRoutes(app, deps.sessions, deps.apiToken);
+  registerSessionRoutes(app, deps.sessions, deps.apiToken, deps.uploadDeadlineMs);
 
   return app;
 }

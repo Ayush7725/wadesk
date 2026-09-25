@@ -1,9 +1,16 @@
-import { DisconnectReason, jidDecode, type ConnectionState, type MessageUpsertType, type WAMessage } from 'baileys';
+import {
+  DisconnectReason,
+  jidDecode,
+  type ConnectionState,
+  type MessageUpsertType,
+  type WAMessage,
+  type WAMessageUpdate,
+} from 'baileys';
 import type { Readable } from 'node:stream';
 import type { Logger } from 'pino';
 import type { PostgresAuthState } from '../auth/postgres-auth-state.js';
 import type { MessageStore } from '../messages/store.js';
-import { normalizeIncoming } from '../whatsapp/normalizer.js';
+import { normalizeIncoming, normalizeStatus } from '../whatsapp/normalizer.js';
 import { messageContent, quotedMessage, recipientJid, type OutgoingMessage } from '../whatsapp/outgoing.js';
 import { MediaNotFoundError, MediaUnavailableError, RateLimitedError, SessionNotConnectedError } from './errors.js';
 import { RateLimiter } from './rate-limiter.js';
@@ -147,6 +154,9 @@ export class Session {
     socket.onMessagesUpsert((messages, type) => {
       this.enqueue(() => this.handleMessages(socket, messages, type), 'incoming messages failed');
     });
+    socket.onMessagesUpdate((updates) => {
+      this.enqueue(() => this.handleStatuses(socket, updates), 'message status updates failed');
+    });
   }
 
   // Sends a text or one file (optionally quoting a message) and returns WhatsApp's message id (WW-FR-20/21/22).
@@ -191,6 +201,16 @@ export class Session {
       if (!event) continue;
       if (MEDIA_TYPES.has(event.messages[0]?.type ?? '')) await this.deps.messages.save(this.id, message);
       await this.deps.events.emit(this.id, event);
+    }
+  }
+
+  // Delivery receipts for messages the business sent: sent → delivered → read, or failed (WW-FR-23).
+  private async handleStatuses(socket: WaSocket, updates: WAMessageUpdate[]): Promise<void> {
+    if (socket !== this.socket) return;
+
+    for (const update of updates) {
+      const event = normalizeStatus(update);
+      if (event) await this.deps.events.emit(this.id, event);
     }
   }
 

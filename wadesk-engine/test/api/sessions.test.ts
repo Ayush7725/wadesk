@@ -196,6 +196,21 @@ describe('session API', () => {
       expect(response.json()).toMatchObject({ error: { code } });
     });
 
+    it('answers malformed uploads with 422 instead of hanging', async () => {
+      const boundary = 'XBOUNDARY';
+      const quickDeadline = buildApp({ pool, sessions: sessions as unknown as SessionService, apiToken: API_TOKEN, uploadDeadlineMs: 200 });
+      const response = await quickDeadline.inject({
+        method: 'POST',
+        url: '/sessions/12/messages',
+        headers: { ...AUTH, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        // A field header without the blank line before its value (the HTTParty streaming bug).
+        payload: `--${boundary}\r\nContent-Disposition: form-data; name="to"\r\n919876543210\r\n--${boundary}--\r\n`,
+      });
+
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({ error: { code: 'invalid_request' } });
+    });
+
     it('tells the caller when to retry after the rate limit', async () => {
       sessions.send.mockRejectedValue(new RateLimitedError(12_300));
 

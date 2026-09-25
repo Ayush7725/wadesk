@@ -1,5 +1,12 @@
 import { Readable } from 'node:stream';
-import type { AnyMessageContent, ConnectionState, MessageUpsertType, MiscMessageGenerationOptions, WAMessage } from 'baileys';
+import type {
+  AnyMessageContent,
+  ConnectionState,
+  MessageUpsertType,
+  MiscMessageGenerationOptions,
+  WAMessage,
+  WAMessageUpdate,
+} from 'baileys';
 import type { LinkMethod } from '../../src/sessions/types.js';
 import type { SocketFactory, WaSocket } from '../../src/whatsapp/socket.js';
 
@@ -13,6 +20,7 @@ export class FakeSocket implements WaSocket {
   private connectionListeners: ((update: Partial<ConnectionState>) => void)[] = [];
   private credsListeners: (() => void)[] = [];
   private messageListeners: ((messages: WAMessage[], type: MessageUpsertType) => void)[] = [];
+  private updateListeners: ((updates: WAMessageUpdate[]) => void)[] = [];
   downloads: WAMessage[] = [];
   sent: { jid: string; content: AnyMessageContent; options: MiscMessageGenerationOptions | undefined }[] = [];
   failDownloads = false;
@@ -27,6 +35,14 @@ export class FakeSocket implements WaSocket {
 
   onMessagesUpsert(listener: (messages: WAMessage[], type: MessageUpsertType) => void): void {
     this.messageListeners.push(listener);
+  }
+
+  onMessagesUpdate(listener: (updates: WAMessageUpdate[]) => void): void {
+    this.updateListeners.push(listener);
+  }
+
+  receipts(updates: WAMessageUpdate[]): void {
+    for (const listener of this.updateListeners) listener(updates);
   }
 
   downloadMedia(message: WAMessage): Promise<Readable> {
