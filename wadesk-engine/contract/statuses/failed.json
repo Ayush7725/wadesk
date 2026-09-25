@@ -1,0 +1,10 @@
+{
+  "event": "statuses",
+  "statuses": [
+    {
+      "id": "3EB0OUT1234567",
+      "status": "failed",
+      "recipient_id": "919876543210"
+    }
+  ]
+}

@@ -360,6 +360,18 @@ describe('SessionManager', () => {
       expect(rows[0]?.payload.includes(Buffer.from('secret caption'))).toBe(false);
     });
 
+    it('forwards delivery receipts for the business\'s messages, one status per event', async () => {
+      const { sockets } = await connected();
+
+      socketAt(sockets, 0).receipts([
+        { key: { remoteJid: '919876543210@s.whatsapp.net', fromMe: true, id: 'OUT1' }, update: { status: 3 } },
+        { key: { remoteJid: '919876543210@s.whatsapp.net', fromMe: true, id: 'OUT1' }, update: { status: 4 } },
+      ]);
+
+      await eventually(() => expect(events.filter(({ event }) => event.event === 'statuses')).toHaveLength(2));
+      expect(events.flatMap(({ event }) => (event.event === 'statuses' ? event.statuses.map((s) => s.status) : []))).toEqual(['delivered', 'read']);
+    });
+
     it('downloads stored media through the connected socket', async () => {
       const { manager, sockets } = await connected();
       socketAt(sockets, 0).receive([customerMessage('P1', { imageMessage: { mimetype: 'image/jpeg' } })]);

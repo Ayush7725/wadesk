@@ -55,21 +55,44 @@ const mediaParams = {
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024; // WhatsApp's document limit
 const MAX_TEXT_LENGTH = 65_536;
+// Reading an upload must finish within this time: some malformed multipart bodies make the parser wait forever.
+export const UPLOAD_DEADLINE_MS = 30_000;
 
 class InvalidSendRequestError extends Error {
   readonly code = 'invalid_request';
+}
+
+// Reads the multipart send request within the deadline, so a stalled parse gets a clear 422 instead of hanging.
+async function readOutgoingWithin(request: FastifyRequest, deadlineMs: number): Promise<OutgoingMessage> {
+  let timer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new InvalidSendRequestError('Upload was not completed in time (malformed multipart body?)'));
+    }, deadlineMs);
+  });
+  try {
+    return await Promise.race([readOutgoing(request), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Reads the multipart send request: fields to, text, reply_to_id, reply_to_text, reply_to_from_me and at most one file.
 async function readOutgoing(request: FastifyRequest): Promise<OutgoingMessage> {
   const fields: Record<string, string> = {};
   let file: OutgoingMessage['file'];
-  for await (const part of request.parts()) {
-    if (part.type === 'file') {
-      file = { data: await part.toBuffer(), mimetype: part.mimetype, filename: part.filename };
-    } else {
-      fields[part.fieldname] = String(part.value);
+  try {
+    for await (const part of request.parts()) {
+      if (part.type === 'file') {
+        file = { data: await part.toBuffer(), mimetype: part.mimetype, filename: part.filename };
+      } else {
+        fields[part.fieldname] = String(part.value);
+      }
     }
+  } catch (error) {
+    // A body that is not valid multipart is the caller's mistake, not a server error.
+    if ((error as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') throw error;
+    throw new InvalidSendRequestError(`Malformed multipart body: ${(error as Error).message}`);
   }
 
   const { to, text, reply_to_id: replyToId, reply_to_text: replyToText = '', reply_to_from_me: replyToFromMe } = fields;
@@ -114,7 +137,12 @@ const tokenMatches = (header: string | undefined, token: Buffer): boolean => {
 };
 
 // Internal session API used by Chatwoot (docs/wadesk/02-architecture.md §4.1).
-export function registerSessionRoutes(app: FastifyInstance, sessions: SessionService, apiToken: string): void {
+export function registerSessionRoutes(
+  app: FastifyInstance,
+  sessions: SessionService,
+  apiToken: string,
+  uploadDeadlineMs = UPLOAD_DEADLINE_MS,
+): void {
   const token = Buffer.from(apiToken);
 
   void app.register(async (scope) => {
@@ -153,7 +181,7 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
     );
 
     scope.post<IdRequest>('/sessions/:id/messages', { schema: { params: idParams } }, async (request, reply) => {
-      const id = await sessions.send(request.params.id, await readOutgoing(request));
+      const id = await sessions.send(request.params.id, await readOutgoingWithin(request, uploadDeadlineMs));
       return reply.code(201).send({ id });
     });
 

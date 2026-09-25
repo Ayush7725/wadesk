@@ -8,3 +8,4 @@ for both sides — update the code and specs on both sides in the same PR.
 | Folder | Event |
 |---|---|
 | `messages/` | `messages` events (Cloud API message shape), one file per message kind |
+| `statuses/` | `statuses` events (delivery receipts), one status per event |
