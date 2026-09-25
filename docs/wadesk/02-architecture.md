@@ -86,6 +86,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json` | New strings (other locales fall back to English) |
 | `settings/inbox/settingsPage/ConfigurationPage.vue` | Connection panel for `baileys` inboxes |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
+| `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
 Other provider-specific branches found in the code (templates, health, embedded signup, campaigns, CSAT
 templates, calling) already check for `whatsapp_cloud` explicitly and therefore skip `baileys` without changes.

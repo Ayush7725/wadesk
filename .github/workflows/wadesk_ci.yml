@@ -1,0 +1,106 @@
+name: WaDesk CI
+
+# Runs on every pull request: lint, frontend tests, and the targeted backend suite
+# (all WhatsApp-related specs plus every spec file the PR adds or changes).
+# The full Chatwoot suite is run manually via "Run Chatwoot CE spec".
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Run Rubocop
+        run: bundle exec rubocop --parallel
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run ESLint
+        run: pnpm run eslint
+      - name: Run frontend tests
+        run: pnpm run test
+
+  backend-targeted:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: --entrypoint redis-server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Strip enterprise code
+        run: rm -rf enterprise spec/enterprise
+      - name: Prepare database
+        run: bundle exec rake db:create db:schema:load
+      - name: Select specs
+        run: |
+          BASE=${{ github.event.pull_request.base.sha || 'HEAD~1' }}
+          {
+            find spec -path '*whatsapp*' -name '*_spec.rb'
+            echo spec/services/conversations/message_window_service_spec.rb
+            git diff --name-only --diff-filter=AM "$BASE" HEAD -- 'spec/**/*_spec.rb' | grep -v '^spec/enterprise/' || true
+          } | sort -u | while read -r f; do [ -f "$f" ] && echo "$f"; done > tmp/spec_targets.txt
+          echo "Running $(wc -l < tmp/spec_targets.txt) spec files"; cat tmp/spec_targets.txt
+      - name: Run targeted backend specs
+        run: bundle exec rspec --format progress $(cat tmp/spec_targets.txt)
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+      - name: Upload rails log folder
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rails-log-folder
+          path: log

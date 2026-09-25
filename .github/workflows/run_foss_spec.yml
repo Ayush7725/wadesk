@@ -1,12 +1,9 @@
 name: Run Chatwoot CE spec
 permissions:
   contents: read
+# WaDesk: the full suite (16 parallel jobs) runs on demand only — before releases and upstream syncs.
+# Pull requests run the targeted suite in wadesk_ci.yml.
 on:
-  push:
-    branches:
-      - develop
-      - master
-  pull_request:
   workflow_dispatch:
 
 jobs:
