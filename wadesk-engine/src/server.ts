@@ -4,8 +4,9 @@ import { createCipher } from './auth/cipher.js';
 import { usePostgresAuthState } from './auth/postgres-auth-state.js';
 import { loadConfig } from './config.js';
 import { migrate } from './db/migrate.js';
+import { DEFAULT_DISPATCHER_OPTIONS, Dispatcher } from './outbox/dispatcher.js';
+import { OutboxSink } from './outbox/outbox.js';
 import { createPool } from './db/pool.js';
-import { logSink } from './sessions/log-sink.js';
 import { SessionManager } from './sessions/manager.js';
 import { SessionRepository } from './sessions/repository.js';
 import { DEFAULT_TIMING } from './sessions/session.js';
@@ -24,11 +25,16 @@ await migrate(config.databaseUrl, (message) => {
   logger.info({ migration: message.trim() });
 });
 
+const repository = new SessionRepository(pool);
+const dispatcher = new Dispatcher(pool, { ...DEFAULT_DISPATCHER_OPTIONS, secret: config.webhookSecret }, logger.child({ component: 'outbox' }));
+
 const sessions = new SessionManager({
-  repository: new SessionRepository(pool),
+  repository,
   createAuthState: (id) => usePostgresAuthState(pool, id, cipher),
   createSocket: createBaileysSocket,
-  events: logSink(logger),
+  events: new OutboxSink(pool, repository, () => {
+    dispatcher.kick();
+  }),
   // Baileys is verbose below "warn"; it also receives this logger.
   logger: logger.child({ component: 'sessions' }, { level: 'warn' }),
   timing: DEFAULT_TIMING,
@@ -39,12 +45,14 @@ const app = buildApp({ pool, sessions, apiToken: config.apiToken }, { loggerInst
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
     sessions.shutdown();
-    void app
-      .close()
+    void dispatcher
+      .stop()
+      .then(() => app.close())
       .then(() => pool.end())
       .then(() => process.exit(0));
   });
 }
 
+dispatcher.start();
 await sessions.resumeAll();
 await app.listen({ port: config.port, host: config.host });
