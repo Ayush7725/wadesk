@@ -38,7 +38,9 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 
 ### Branching and pull requests
 
-- `main` — the product. Always releasable. Protected: changes only via pull request with green CI.
+- `main` — the product. Always releasable. Changes only via pull request with green CI. (GitHub branch protection
+  needs a paid plan for private repos, so this is a team rule: never push directly to `main`, never merge a red PR.)
+- Feature PRs are **squash-merged**; `upstream-sync` PRs use a **merge commit** so Chatwoot's history is preserved.
 - `feat/<scope>-<short-desc>`, `fix/...`, `chore/...` — one task per branch, one PR per task.
 - `upstream` remote — `chatwoot/chatwoot`. Upstream updates arrive through `chore/upstream-sync-<version>` PRs.
 - Commits follow Conventional Commits: `type(scope): subject` (e.g. `feat(engine): add QR session lifecycle`).
@@ -58,3 +60,24 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
   and list it in [02-architecture.md § Upstream touch points](02-architecture.md#upstream-touch-points).
 - Never modify files under `enterprise/` (separate licence; see ADR-0001).
 - Our non-Rails code lives in `wadesk-engine/` at the repo root.
+
+## Local development
+
+Everything runs in containers; nothing but Docker/Podman is needed on the laptop. `bin/wadesk-dev` wraps
+`docker-compose.wadesk-dev.yaml` (Ruby 3.4.4, Node 24, pnpm 10 toolbox + Postgres + Redis, no host ports except the
+dev server). On Fedora it uses the rootless Podman socket automatically.
+
+| Command | Purpose |
+|---|---|
+| `bin/wadesk-dev setup` | First-time (and after dependency changes): build toolbox, install gems/packages, prepare dev + test DBs |
+| `bin/wadesk-dev rspec spec/models/channel/whatsapp_spec.rb` | Run backend specs |
+| `bin/wadesk-dev rubocop app/models/channel/whatsapp.rb` | Lint Ruby |
+| `bin/wadesk-dev pnpm test` / `bin/wadesk-dev pnpm eslint` | Frontend tests / lint |
+| `bin/wadesk-dev sh` | Shell inside the toolbox |
+| `bin/wadesk-dev server` | Chatwoot dev server on http://localhost:3300 (Vite on 3036) |
+| `bin/wadesk-dev down` | Stop everything (data volumes are kept) |
+
+Engine commands are in [wadesk-engine/README.md](../../wadesk-engine/README.md).
+
+The laptop has limited memory: stop the demo stacks (`docker compose stop` in the demo folders) before heavy work
+such as `setup` or the full spec suite.
