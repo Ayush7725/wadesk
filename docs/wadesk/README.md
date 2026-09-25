@@ -11,6 +11,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [01-requirements.md](01-requirements.md) | What Step 1 must do (functional + non-functional requirements) | Approved 2026-09-25 |
 | [02-architecture.md](02-architecture.md) | How it is built: components, contracts, data flows | Approved 2026-09-25 |
 | [03-delivery-plan.md](03-delivery-plan.md) | Milestones, tasks, acceptance criteria, test strategy | Approved 2026-09-25 |
+| [04-safety-requirements.md](04-safety-requirements.md) | WhatsApp Safety Layer requirements and phasing | Draft — CR-001 |
 | [adr/](adr/) | Architecture Decision Records — one file per significant decision | See index below |
 
 ### ADR index
@@ -22,6 +23,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [0003](adr/0003-baileys-as-chatwoot-provider.md) | Integrate as a `baileys` provider of `Channel::Whatsapp`, reusing the incoming pipeline | Accepted |
 | [0004](adr/0004-session-state-in-postgres.md) | Store WhatsApp session credentials in Postgres | Accepted |
 | [0005](adr/0005-plan-gating-with-feature-flags.md) | Gate channel types per account with Chatwoot feature flags | Accepted |
+| [0006](adr/0006-whatsapp-safety-layer.md) | WhatsApp Safety Layer; Web connections are conversations-only | Proposed (CR-001) |
 
 ## Development process (SDLC)
 
@@ -34,7 +36,12 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 
 - **Gate A — Design approval:** requirements, architecture, ADRs and delivery plan approved.
 - **Gate B — Milestone acceptance:** each milestone ends with a demo against its acceptance criteria.
-- Changes to an approved requirement or ADR go through a new ADR (or a revision marked in the doc), never silently.
+- Changes to an approved requirement or ADR go through a **change request** (CR): a docs-only PR with a new ADR and/or
+  requirement changes plus a change-log entry, approved by the product owner before implementation.
+
+| CR | Title | Status |
+|---|---|---|
+| CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Awaiting approval |
 
 ### Branching and pull requests
 

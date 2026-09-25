@@ -47,6 +47,8 @@ Internal modules:
 - `Session` — wraps a Baileys socket: connect, QR/pairing code, reconnect with capped exponential backoff, logout.
   Verifies the linked number equals the expected number (WW-FR-04).
 - `AuthStore` — Baileys `AuthenticationState` backed by Postgres, values encrypted with AES-256-GCM (ADR-0004).
+- `SendLimiter` — per-session outgoing rate limit (SAFE-FR-03): excess messages wait in a queue. Plain throughput
+  control only; no randomised "human" delays or other detection-evasion behaviour (ADR-0006).
 - `Normalizer` — maps Baileys events to the Chatwoot contract (§4). Pure functions, fully unit-tested.
 - `Outbox` + `Dispatcher` — every event bound for Chatwoot is first written to an outbox table, then delivered
   with retries; rows are deleted on 2xx. Guarantees at-least-once delivery across restarts (WW-FR-17, WW-NFR-02).
@@ -66,6 +68,8 @@ New files (no upstream conflicts):
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
 | `app/jobs/whatsapp_web/connection_update_job.rb` | Persists connection state, notifies admins |
 | `app/controllers/api/v1/accounts/whatsapp_web/sessions_controller.rb` | QR / pairing code / reconnect / logout for the UI |
+| `app/services/wadesk/safety/new_chat_limit_service.rb` | Daily business-initiated chat cap for Web inboxes (SAFE-FR-02), checked before `send_message` |
+| `app/services/wadesk/safety/opt_out_detector.rb` + `app/models/wadesk/consent_event.rb` | Opt-out keyword detection on incoming messages; append-only consent events (SAFE-FR-10/11) |
 | `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/WhatsappWeb.vue` (+ components) | Create inbox + QR panel |
 | Specs under `spec/` mirroring the above | |
 
@@ -86,6 +90,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json` | New strings (other locales fall back to English) |
 | `settings/inbox/settingsPage/ConfigurationPage.vue` | Connection panel for `baileys` inboxes |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
+| Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
 Other provider-specific branches found in the code (templates, health, embedded signup, campaigns, CSAT
@@ -190,6 +195,7 @@ available the message is still delivered with `wa_id` = LID and linked later whe
 | `wadesk_engine.auth_keys` | Engine | `session_id, key, value_encrypted` (Baileys creds + signal keys) |
 | `wadesk_engine.messages` | Engine | `session_id, message_id, meta_json, created_at` (30-day retention; no text bodies) |
 | `wadesk_engine.outbox` | Engine | `id, session_id, payload, attempts, next_attempt_at` |
+| `wadesk_consent_events` (new table) | Chatwoot | `account_id, contact_id, kind (opt_in/opt_out), scope, source, evidence, recorded_by, created_at` — append-only (ADR-0006) |
 
 ## 6. Security
 
@@ -210,7 +216,7 @@ no in-process state that cannot be rebuilt from Postgres, so a later step can sh
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| WhatsApp bans numbers using unofficial clients | Customer loses number | Ban-risk disclaimer (WW-NFR-10), no bulk features in Step 1, human-like send pacing in engine |
+| WhatsApp restricts numbers (unwanted/bulk messaging, user reports, unofficial clients) | Client loses number, blames WaDesk | Safety layer (ADR-0006): Web is conversations-only, new-chat cap and rate limits, opt-out capture, clear disclosure (WW-NFR-10); never promise ban-proof |
 | Baileys breaks after a WhatsApp protocol change; v7 is a release candidate | Channel down for all Web customers | Exact pinning, adapter layer around Baileys, fast-upgrade runbook, monitoring of disconnect spikes |
 | LID migration changes contact identity | Duplicate contacts | Store LID as alternate identifier, link when phone known; contract tests with LID fixtures |
 | Upstream Chatwoot changes conflict with our edits | Slower upgrades | Touch-point list, additive files, `upstream-sync` PRs with full test run |
