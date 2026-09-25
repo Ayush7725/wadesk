@@ -7,5 +7,6 @@ export const unusedSessions: SessionService = {
   upsert: () => Promise.reject(new Error('unused')),
   get: () => Promise.reject(new Error('unused')),
   downloadMedia: () => Promise.reject(new Error('unused')),
+  send: () => Promise.reject(new Error('unused')),
   remove: () => Promise.reject(new Error('unused')),
 };

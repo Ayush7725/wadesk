@@ -21,3 +21,19 @@ export class MediaUnavailableError extends Error {
     this.name = 'MediaUnavailableError';
   }
 }
+
+export class SessionNotConnectedError extends Error {
+  readonly code = 'not_connected';
+  constructor(id: string) {
+    super(`Session ${id} is not connected to WhatsApp`);
+    this.name = 'SessionNotConnectedError';
+  }
+}
+
+export class RateLimitedError extends Error {
+  readonly code = 'rate_limited';
+  constructor(readonly retryAfterMs: number) {
+    super(`Sending limit reached for this number; retry in ${String(Math.ceil(retryAfterMs / 1000))} s`);
+    this.name = 'RateLimitedError';
+  }
+}

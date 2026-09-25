@@ -154,7 +154,7 @@ Base URL `WADESK_ENGINE_URL` (internal). Header `Authorization: Bearer ${WADESK_
 | `PUT /sessions/:id` `{phone_number, webhook_url, link_method?}` | Create or restart a session (idempotent while live). `link_method`: `qr` (default) or `code` (ADR-0007) | `202 {state}` |
 | `GET /sessions/:id` | Current state (+ live QR, or current pairing code in `code` mode, while pending) | `{state, qr?, pairing_code?, me?, last_error?}` |
 | `DELETE /sessions/:id` | Log out and wipe credentials | `204` |
-| `POST /sessions/:id/messages` (multipart) | Send text or one file, optional `reply_to` | `201 {id}` |
+| `POST /sessions/:id/messages` (multipart: `to`, `text`, one `file`, `reply_to_id/text/from_me`) | Send text or one file, optionally quoting a message. Over 20/min per number → `429` + `Retry-After`; Chatwoot's send job retries (queued in Sidekiq, never dropped) | `201 {id}` |
 | `GET /sessions/:id/media/:message_id` | Stream decrypted media | binary + `Content-Type`, `Content-Disposition` |
 | `GET /health`, `GET /metrics` | Ops | |
 

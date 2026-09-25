@@ -35,6 +35,8 @@ All routes except `/health` need `Authorization: Bearer $WADESK_ENGINE_API_TOKEN
 |---|---|
 | `PUT /sessions/:id` `{phone_number, webhook_url, link_method?}` | `202 {state}` — create or restart; idempotent while live. `link_method`: `qr` (default) or `code` |
 | `GET /sessions/:id` | `{state, qr?, pairing_code?, me?, last_error?}` — in `code` mode `pairing_code` is always the currently valid code |
+| `POST /sessions/:id/messages` (multipart: `to`, `text?`, one `file?`, `reply_to_id?`, `reply_to_text?`, `reply_to_from_me?`) | `201 {id}` (WhatsApp message id). `409 not_connected`, `422 invalid_recipient`/`invalid_request`, `413 file_too_large` (>100 MB), `429 rate_limited` with `Retry-After` (20 sends/min per number, SAFE-FR-03) |
+| `GET /sessions/:id/media/:messageId` | Streams an incoming message's media with `Content-Type` and `Content-Disposition`; `404 media_not_found`, `502 media_unavailable` |
 | `DELETE /sessions/:id` | `204` — logs out and wipes credentials |
 | `GET /health` | `{status: "ok"}` or `503` when the database is down |
 

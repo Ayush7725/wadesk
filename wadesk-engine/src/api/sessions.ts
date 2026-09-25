@@ -1,8 +1,16 @@
 import { timingSafeEqual } from 'node:crypto';
+import multipart from '@fastify/multipart';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Readable } from 'node:stream';
 import type { WAMessage } from 'baileys';
-import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../sessions/errors.js';
+import {
+  MediaNotFoundError,
+  MediaUnavailableError,
+  RateLimitedError,
+  SessionNotConnectedError,
+  SessionNotFoundError,
+} from '../sessions/errors.js';
+import { InvalidRecipientError, type OutgoingMessage } from '../whatsapp/outgoing.js';
 import type { SessionSnapshot } from '../sessions/session.js';
 import type { LinkMethod } from '../sessions/types.js';
 
@@ -11,6 +19,7 @@ export interface SessionService {
   upsert(id: string, expectedPhone: string, webhookUrl: string, linkMethod: LinkMethod): Promise<SessionSnapshot>;
   get(id: string): Promise<SessionSnapshot>;
   downloadMedia(id: string, messageId: string): Promise<{ stream: Readable; message: WAMessage }>;
+  send(id: string, outgoing: OutgoingMessage): Promise<string>;
   remove(id: string): Promise<void>;
 }
 
@@ -44,6 +53,38 @@ const mediaParams = {
   properties: { ...idParams.properties, messageId: { type: 'string', pattern: '^[A-Za-z0-9]{1,64}$' } },
 } as const;
 
+const MAX_FILE_BYTES = 100 * 1024 * 1024; // WhatsApp's document limit
+const MAX_TEXT_LENGTH = 65_536;
+
+class InvalidSendRequestError extends Error {
+  readonly code = 'invalid_request';
+}
+
+// Reads the multipart send request: fields to, text, reply_to_id, reply_to_text, reply_to_from_me and at most one file.
+async function readOutgoing(request: FastifyRequest): Promise<OutgoingMessage> {
+  const fields: Record<string, string> = {};
+  let file: OutgoingMessage['file'];
+  for await (const part of request.parts()) {
+    if (part.type === 'file') {
+      file = { data: await part.toBuffer(), mimetype: part.mimetype, filename: part.filename };
+    } else {
+      fields[part.fieldname] = String(part.value);
+    }
+  }
+
+  const { to, text, reply_to_id: replyToId, reply_to_text: replyToText = '', reply_to_from_me: replyToFromMe } = fields;
+  if (!to) throw new InvalidSendRequestError('"to" is required');
+  if (!text && !file) throw new InvalidSendRequestError('A text or a file is required');
+  if (text && text.length > MAX_TEXT_LENGTH) throw new InvalidSendRequestError('Text is too long');
+
+  return {
+    to,
+    ...(text ? { text } : {}),
+    ...(file ? { file } : {}),
+    ...(replyToId ? { replyTo: { id: replyToId, text: replyToText, fromMe: replyToFromMe === 'true' } } : {}),
+  };
+}
+
 // Content type and file name for a stored media message (Chatwoot names the attachment after it).
 function mediaDetails(message: WAMessage): { mimetype: string; filename: string } {
   const content = message.message ?? {};
@@ -76,7 +117,9 @@ const tokenMatches = (header: string | undefined, token: Buffer): boolean => {
 export function registerSessionRoutes(app: FastifyInstance, sessions: SessionService, apiToken: string): void {
   const token = Buffer.from(apiToken);
 
-  void app.register((scope, _options, done) => {
+  void app.register(async (scope) => {
+    await scope.register(multipart, { limits: { fileSize: MAX_FILE_BYTES, files: 1, fields: 10 }, throwFileSizeLimit: true });
+
     scope.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
       if (!tokenMatches(request.headers.authorization, token)) await sendError(reply, 401, 'unauthorized', 'Invalid API token');
     });
@@ -84,6 +127,17 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
     scope.setErrorHandler((error, _request, reply) => {
       if (error instanceof SessionNotFoundError || error instanceof MediaNotFoundError) return sendError(reply, 404, error.code, error.message);
       if (error instanceof MediaUnavailableError) return sendError(reply, 502, error.code, error.message);
+      if (error instanceof SessionNotConnectedError) return sendError(reply, 409, error.code, error.message);
+      if (error instanceof InvalidRecipientError || error instanceof InvalidSendRequestError) {
+        return sendError(reply, 422, error.code, error.message);
+      }
+      if (error instanceof RateLimitedError) {
+        return reply
+          .code(429)
+          .header('retry-after', String(Math.ceil(error.retryAfterMs / 1000)))
+          .send({ error: { code: error.code, message: error.message, retry_after_ms: error.retryAfterMs } });
+      }
+      if ((error as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') return sendError(reply, 413, 'file_too_large', 'File exceeds 100 MB');
       if ((error as { validation?: unknown }).validation) return sendError(reply, 422, 'invalid_request', (error as Error).message);
       throw error;
     });
@@ -97,6 +151,11 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
     scope.get<IdRequest>('/sessions/:id', { schema: { params: idParams } }, async (request) =>
       toResponse(await sessions.get(request.params.id)),
     );
+
+    scope.post<IdRequest>('/sessions/:id/messages', { schema: { params: idParams } }, async (request, reply) => {
+      const id = await sessions.send(request.params.id, await readOutgoing(request));
+      return reply.code(201).send({ id });
+    });
 
     scope.get<MediaRequest>('/sessions/:id/media/:messageId', { schema: { params: mediaParams } }, async (request, reply) => {
       const { stream, message } = await sessions.downloadMedia(request.params.id, request.params.messageId);
@@ -112,6 +171,5 @@ export function registerSessionRoutes(app: FastifyInstance, sessions: SessionSer
       return reply.code(204).send();
     });
 
-    done();
   });
 }
