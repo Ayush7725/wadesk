@@ -1,5 +1,5 @@
 import { Readable } from 'node:stream';
-import type { ConnectionState, MessageUpsertType, WAMessage } from 'baileys';
+import type { AnyMessageContent, ConnectionState, MessageUpsertType, MiscMessageGenerationOptions, WAMessage } from 'baileys';
 import type { LinkMethod } from '../../src/sessions/types.js';
 import type { SocketFactory, WaSocket } from '../../src/whatsapp/socket.js';
 
@@ -14,6 +14,7 @@ export class FakeSocket implements WaSocket {
   private credsListeners: (() => void)[] = [];
   private messageListeners: ((messages: WAMessage[], type: MessageUpsertType) => void)[] = [];
   downloads: WAMessage[] = [];
+  sent: { jid: string; content: AnyMessageContent; options: MiscMessageGenerationOptions | undefined }[] = [];
   failDownloads = false;
 
   onConnectionUpdate(listener: (update: Partial<ConnectionState>) => void): void {
@@ -32,6 +33,11 @@ export class FakeSocket implements WaSocket {
     if (this.failDownloads) return Promise.reject(new Error('media expired'));
     this.downloads.push(message);
     return Promise.resolve(Readable.from([Buffer.from(`media:${message.key.id ?? ''}`)]));
+  }
+
+  sendMessage(jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions): Promise<WAMessage> {
+    this.sent.push({ jid, content, options });
+    return Promise.resolve({ key: { remoteJid: jid, fromMe: true, id: `SENT${String(this.sent.length)}` } });
   }
 
   receive(messages: WAMessage[], type: MessageUpsertType = 'notify'): void {

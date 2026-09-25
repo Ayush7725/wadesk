@@ -1,3 +1,4 @@
+import type { OutgoingMessage } from '../whatsapp/outgoing.js';
 import { SessionNotFoundError } from './errors.js';
 import { Session, type SessionDeps, type SessionSnapshot } from './session.js';
 import type { LinkMethod, SessionRecord } from './types.js';
@@ -54,6 +55,12 @@ export class SessionManager {
     const record = await this.deps.repository.find(id);
     if (!record) throw new SessionNotFoundError(id);
     return { state: record.state, ...(record.lastError ? { lastError: record.lastError } : {}) };
+  }
+
+  async send(id: string, outgoing: OutgoingMessage): Promise<string> {
+    const running = this.sessions.get(id);
+    if (!running) throw new SessionNotFoundError(id);
+    return running.send(outgoing);
   }
 
   async downloadMedia(id: string, messageId: string) {

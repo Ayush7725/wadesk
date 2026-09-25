@@ -4,7 +4,9 @@ import type { Logger } from 'pino';
 import type { PostgresAuthState } from '../auth/postgres-auth-state.js';
 import type { MessageStore } from '../messages/store.js';
 import { normalizeIncoming } from '../whatsapp/normalizer.js';
-import { MediaNotFoundError, MediaUnavailableError } from './errors.js';
+import { messageContent, quotedMessage, recipientJid, type OutgoingMessage } from '../whatsapp/outgoing.js';
+import { MediaNotFoundError, MediaUnavailableError, RateLimitedError, SessionNotConnectedError } from './errors.js';
+import { RateLimiter } from './rate-limiter.js';
 import type { SocketFactory, WaSocket } from '../whatsapp/socket.js';
 import type { SessionRepository } from './repository.js';
 import type { ConnectionEvent, EventSink, LinkMethod, SessionRecord, SessionState } from './types.js';
@@ -13,9 +15,10 @@ export interface SessionTiming {
   baseBackoffMs: number;
   maxBackoffMs: number; // keeps reconnects within WW-NFR-02's 60 s
   qrTimeoutMs: number; // stop offering QR codes nobody scans
+  sendsPerMinute: number; // SAFE-FR-03
 }
 
-export const DEFAULT_TIMING: SessionTiming = { baseBackoffMs: 1_000, maxBackoffMs: 30_000, qrTimeoutMs: 10 * 60_000 };
+export const DEFAULT_TIMING: SessionTiming = { baseBackoffMs: 1_000, maxBackoffMs: 30_000, qrTimeoutMs: 10 * 60_000, sendsPerMinute: 20 };
 
 export interface SessionDeps {
   repository: SessionRepository;
@@ -51,6 +54,7 @@ export class Session {
   private attempts = 0;
   private credsSaving: Promise<void> = Promise.resolve();
   private updates: Promise<void> = Promise.resolve();
+  private readonly limiter: RateLimiter;
   private reconnectTimer: NodeJS.Timeout | undefined;
   private stopped = false;
   private mePhone: string | undefined;
@@ -61,6 +65,7 @@ export class Session {
     private readonly deps: SessionDeps,
   ) {
     this.state = record.state;
+    this.limiter = new RateLimiter(deps.timing.sendsPerMinute);
     this.mePhone = record.meJid ? jidDecode(record.meJid)?.user : undefined;
   }
 
@@ -142,6 +147,23 @@ export class Session {
     socket.onMessagesUpsert((messages, type) => {
       this.enqueue(() => this.handleMessages(socket, messages, type), 'incoming messages failed');
     });
+  }
+
+  // Sends a text or one file (optionally quoting a message) and returns WhatsApp's message id (WW-FR-20/21/22).
+  async send(outgoing: OutgoingMessage): Promise<string> {
+    const jid = recipientJid(outgoing.to);
+    if (this.state !== 'connected' || !this.socket) throw new SessionNotConnectedError(this.id);
+    const wait = this.limiter.take();
+    if (wait > 0) throw new RateLimitedError(wait);
+
+    const sent = await this.socket.sendMessage(
+      jid,
+      messageContent(outgoing),
+      outgoing.replyTo ? { quoted: quotedMessage(jid, outgoing.replyTo) } : {},
+    );
+    const id = sent?.key.id;
+    if (!id) throw new Error('WhatsApp did not return a message id');
+    return id;
   }
 
   // Streams a stored incoming message's media (served to Chatwoot for attachments).

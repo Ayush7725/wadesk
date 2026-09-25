@@ -1,9 +1,11 @@
 import makeWASocket, {
   downloadMediaMessage,
   makeCacheableSignalKeyStore,
+  type AnyMessageContent,
   type AuthenticationState,
   type ConnectionState,
   type MessageUpsertType,
+  type MiscMessageGenerationOptions,
   type WAMessage,
 } from 'baileys';
 import type { Readable } from 'node:stream';
@@ -19,6 +21,7 @@ export interface WaSocket {
   onMessagesUpsert(listener: (messages: WAMessage[], type: MessageUpsertType) => void): void;
   // Downloads and decrypts a message's media; asks the phone to re-upload expired media.
   downloadMedia(message: WAMessage): Promise<Readable>;
+  sendMessage(jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions): Promise<WAMessage | undefined>;
   requestPairingCode(phoneNumber: string): Promise<string>;
   logout(): Promise<void>;
   end(): void;
@@ -53,6 +56,7 @@ export const createBaileysSocket: SocketFactory = (auth, logger, linkMethod) => 
       socket.ev.on('messages.upsert', ({ messages, type }) => {
         listener(messages, type);
       }),
+    sendMessage: (jid, content, options) => socket.sendMessage(jid, content, options),
     downloadMedia: (message) =>
       downloadMediaMessage(message, 'stream', {}, { logger, reuploadRequest: socket.updateMediaMessage }),
     requestPairingCode: (phoneNumber) => socket.requestPairingCode(phoneNumber),

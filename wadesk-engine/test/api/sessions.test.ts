@@ -3,7 +3,13 @@ import type { SessionService } from '../../src/api/sessions.js';
 import { buildApp } from '../../src/app.js';
 import { createPool } from '../../src/db/pool.js';
 import { Readable } from 'node:stream';
-import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../../src/sessions/errors.js';
+import {
+  MediaNotFoundError,
+  MediaUnavailableError,
+  RateLimitedError,
+  SessionNotConnectedError,
+  SessionNotFoundError,
+} from '../../src/sessions/errors.js';
 import { API_TOKEN, AUTH } from '../support/app.js';
 import { databaseUrl } from '../support/db.js';
 
@@ -16,7 +22,7 @@ describe('session API', () => {
   const body = { phone_number: '919812345678', webhook_url: 'http://chatwoot:3000/webhooks/whatsapp_web/12' };
 
   beforeEach(() => {
-    sessions = { upsert: vi.fn(), get: vi.fn(), downloadMedia: vi.fn(), remove: vi.fn() };
+    sessions = { upsert: vi.fn(), get: vi.fn(), downloadMedia: vi.fn(), send: vi.fn(), remove: vi.fn() };
   });
 
   it.each([undefined, 'Bearer wrong-token', API_TOKEN])('rejects requests with authorization %s', async (authorization) => {
@@ -131,6 +137,73 @@ describe('session API', () => {
 
     expect(response.statusCode).toBe(status);
     expect(response.json()).toMatchObject({ error: { code } });
+  });
+
+  describe('POST /sessions/:id/messages', () => {
+    const form = (fields: Record<string, string>, file?: { name: string; type: string; body: string }) => {
+      const data = new FormData();
+      for (const [key, value] of Object.entries(fields)) data.append(key, value);
+      if (file) data.append('file', new Blob([file.body], { type: file.type }), file.name);
+      return data;
+    };
+    const post = (payload: FormData) => app().inject({ method: 'POST', url: '/sessions/12/messages', headers: AUTH, payload });
+
+    it('sends a text with an optional quoted reply', async () => {
+      sessions.send.mockResolvedValue('3EB0SENT');
+
+      const response = await post(form({ to: '919876543210', text: 'Yes, in brown', reply_to_id: 'IN1', reply_to_text: 'Brown?', reply_to_from_me: 'false' }));
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json()).toEqual({ id: '3EB0SENT' });
+      expect(sessions.send).toHaveBeenCalledWith('12', {
+        to: '919876543210',
+        text: 'Yes, in brown',
+        replyTo: { id: 'IN1', text: 'Brown?', fromMe: false },
+      });
+    });
+
+    it('sends one file with a caption', async () => {
+      sessions.send.mockResolvedValue('3EB0FILE');
+
+      await post(form({ to: '919876543210', text: 'Quotation' }, { name: 'quote.pdf', type: 'application/pdf', body: '%PDF' }));
+
+      expect(sessions.send).toHaveBeenCalledWith('12', {
+        to: '919876543210',
+        text: 'Quotation',
+        file: { data: Buffer.from('%PDF'), mimetype: 'application/pdf', filename: 'quote.pdf' },
+      });
+    });
+
+    it.each([
+      ['no recipient', form({ text: 'hi' })],
+      ['neither text nor file', form({ to: '919876543210' })],
+    ])('rejects %s with 422', async (_name, payload) => {
+      const response = await post(payload);
+
+      expect(response.statusCode).toBe(422);
+      expect(sessions.send).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [new SessionNotConnectedError('12'), 409, 'not_connected'],
+      [new RateLimitedError(12_300), 429, 'rate_limited'],
+    ])('maps %s', async (error, status, code) => {
+      sessions.send.mockRejectedValue(error);
+
+      const response = await post(form({ to: '919876543210', text: 'hi' }));
+
+      expect(response.statusCode).toBe(status);
+      expect(response.json()).toMatchObject({ error: { code } });
+    });
+
+    it('tells the caller when to retry after the rate limit', async () => {
+      sessions.send.mockRejectedValue(new RateLimitedError(12_300));
+
+      const response = await post(form({ to: '919876543210', text: 'hi' }));
+
+      expect(response.headers['retry-after']).toBe('13');
+      expect(response.json()).toMatchObject({ error: { retry_after_ms: 12_300 } });
+    });
   });
 
   it('deletes a session', async () => {

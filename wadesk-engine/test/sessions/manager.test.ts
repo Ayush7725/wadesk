@@ -6,7 +6,13 @@ import { createCipher } from '../../src/auth/cipher.js';
 import { usePostgresAuthState } from '../../src/auth/postgres-auth-state.js';
 import { createPool } from '../../src/db/pool.js';
 import { MessageStore } from '../../src/messages/store.js';
-import { MediaNotFoundError, MediaUnavailableError, SessionNotFoundError } from '../../src/sessions/errors.js';
+import {
+  MediaNotFoundError,
+  MediaUnavailableError,
+  RateLimitedError,
+  SessionNotConnectedError,
+  SessionNotFoundError,
+} from '../../src/sessions/errors.js';
 import { SessionManager } from '../../src/sessions/manager.js';
 import { SessionRepository } from '../../src/sessions/repository.js';
 import type { SessionTiming } from '../../src/sessions/session.js';
@@ -18,7 +24,7 @@ const PHONE = '919812345678';
 const OTHER_PHONE = '919800000000';
 const WEBHOOK = 'http://chatwoot/webhooks/whatsapp_web/1';
 // Long QR limit by default so slow CI runners never hit it by accident; QR-expiry tests use SHORT_QR explicitly.
-const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 60_000 };
+const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 60_000, sendsPerMinute: 20 };
 const SHORT_QR: SessionTiming = { ...FAST, qrTimeoutMs: 150 };
 // Generous timeout: these steps take milliseconds, but a busy CI runner or laptop can stall the database briefly.
 const eventually = <T>(assertion: () => T | Promise<T>) => vi.waitFor(assertion, { timeout: 5_000, interval: 10 });
@@ -373,6 +379,52 @@ describe('SessionManager', () => {
       await expect(manager.downloadMedia('t-1', 'NOPE')).rejects.toThrow(MediaNotFoundError);
       socketAt(sockets, 0).failDownloads = true;
       await expect(manager.downloadMedia('t-1', 'P1')).rejects.toThrow(MediaUnavailableError);
+    });
+  });
+
+  describe('sending', () => {
+    const linked = async (timing: SessionTiming = FAST) => {
+      const built = build({ timing });
+      await built.manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+      socketAt(built.sockets, 0).open(PHONE);
+      await eventually(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
+      return built;
+    };
+
+    it('sends a text and returns WhatsApp\'s message id', async () => {
+      const { manager, sockets } = await linked();
+
+      expect(await manager.send('t-1', { to: '919876543210', text: 'Price is ₹45,000' })).toBe('SENT1');
+      expect(socketAt(sockets, 0).sent).toEqual([{ jid: '919876543210@s.whatsapp.net', content: { text: 'Price is ₹45,000' }, options: {} }]);
+    });
+
+    it('quotes the message being answered', async () => {
+      const { manager, sockets } = await linked();
+
+      await manager.send('t-1', { to: '123456789012345@lid', text: 'Yes', replyTo: { id: 'IN1', text: 'Brown?', fromMe: false } });
+
+      expect(socketAt(sockets, 0).sent[0]?.options).toEqual({
+        quoted: { key: { remoteJid: '123456789012345@lid', id: 'IN1', fromMe: false }, message: { conversation: 'Brown?' } },
+      });
+    });
+
+    it('refuses to send while not connected', async () => {
+      const { manager } = build();
+      await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+
+      await expect(manager.send('t-1', { to: '919876543210', text: 'hi' })).rejects.toThrow(SessionNotConnectedError);
+    });
+
+    it('limits sends per minute per number and reports when to retry', async () => {
+      const { manager, sockets } = await linked({ ...FAST, sendsPerMinute: 2 });
+      await manager.send('t-1', { to: '919876543210', text: '1' });
+      await manager.send('t-1', { to: '919876543210', text: '2' });
+
+      const error = await manager.send('t-1', { to: '919876543210', text: '3' }).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(RateLimitedError);
+      expect((error as RateLimitedError).retryAfterMs).toBeGreaterThan(55_000);
+      expect(socketAt(sockets, 0).sent).toHaveLength(2);
     });
   });
 
