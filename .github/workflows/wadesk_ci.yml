@@ -22,6 +22,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     permissions:
+      contents: read # job-level permissions replace the workflow's, so checkout needs this again
       pull-requests: read
     outputs:
       engine: ${{ steps.filter.outputs.engine }}
