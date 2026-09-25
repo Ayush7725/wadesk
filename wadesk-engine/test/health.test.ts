@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { createPool } from '../src/db/pool.js';
+import { API_TOKEN, unusedSessions } from './support/app.js';
 import { databaseUrl } from './support/db.js';
 
 describe('GET /health', () => {
@@ -8,7 +9,7 @@ describe('GET /health', () => {
   afterAll(() => pool.end());
 
   it('reports ok when the database is reachable', async () => {
-    const app = buildApp({ pool });
+    const app = buildApp({ pool, sessions: unusedSessions, apiToken: API_TOKEN });
     const response = await app.inject({ method: 'GET', url: '/health' });
 
     expect(response.statusCode).toBe(200);
@@ -18,7 +19,7 @@ describe('GET /health', () => {
 
   it('reports 503 when the database is unreachable', async () => {
     const deadPool = createPool('postgres://postgres@127.0.0.1:1/none');
-    const app = buildApp({ pool: deadPool });
+    const app = buildApp({ pool: deadPool, sessions: unusedSessions, apiToken: API_TOKEN });
     const response = await app.inject({ method: 'GET', url: '/health' });
 
     expect(response.statusCode).toBe(503);
