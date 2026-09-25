@@ -2,6 +2,7 @@ name: WaDesk CI
 
 # Runs on every pull request: lint, frontend tests, the targeted backend suite
 # (all WhatsApp-related specs plus every spec file the PR adds or changes), and the wadesk-engine checks.
+# Each job runs only when its part of the repo changed (or this workflow changed), to save CI minutes.
 # The full Chatwoot suite is run manually via "Run Chatwoot CE spec".
 on:
   pull_request:
@@ -18,7 +19,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # job-level permissions replace the workflow's, so checkout needs this again
+      pull-requests: read
+    outputs:
+      engine: ${{ steps.filter.outputs.engine }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            ci: &ci
+              - '.github/workflows/wadesk_ci.yml'
+            engine:
+              - *ci
+              - 'wadesk-engine/**'
+            frontend:
+              - *ci
+              - 'app/javascript/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'vite.config.ts'
+              - 'vitest.config.ts'
+              - 'vite.shared.*'
+              - 'vitest.setup.js'
+              - 'tailwind.config.js'
+            backend:
+              - *ci
+              - 'app/**'
+              - 'lib/**'
+              - 'config/**'
+              - 'db/**'
+              - 'spec/**'
+              - 'Gemfile'
+              - 'Gemfile.lock'
+              - '.rubocop.yml'
+              - 'rubocop/**'
+
   engine:
+    needs: changes
+    if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -56,6 +101,8 @@ jobs:
         run: docker build -t wadesk-engine:ci .
 
   lint-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +113,8 @@ jobs:
         run: bundle exec rubocop --parallel
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +131,8 @@ jobs:
         run: pnpm run test
 
   backend-targeted:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
