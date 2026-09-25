@@ -4,6 +4,7 @@ import { createCipher } from './auth/cipher.js';
 import { usePostgresAuthState } from './auth/postgres-auth-state.js';
 import { loadConfig } from './config.js';
 import { migrate } from './db/migrate.js';
+import { guardConsole } from './logging/console-guard.js';
 import { MessageStore } from './messages/store.js';
 import { DEFAULT_DISPATCHER_OPTIONS, Dispatcher } from './outbox/dispatcher.js';
 import { OutboxSink } from './outbox/outbox.js';
@@ -19,6 +20,7 @@ const logger = pino({
   // Never log message content, credentials or tokens (WW-NFR-07).
   redact: ['req.headers.authorization', 'req.body', 'res.body'],
 });
+guardConsole(logger); // before anything creates Baileys sockets
 const pool = createPool(config.databaseUrl);
 const cipher = createCipher(config.encryptionKey);
 
