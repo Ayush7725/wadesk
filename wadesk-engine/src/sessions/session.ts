@@ -42,6 +42,7 @@ export class Session {
   private qrDeadline: number | undefined;
   private attempts = 0;
   private credsSaving: Promise<void> = Promise.resolve();
+  private updates: Promise<void> = Promise.resolve();
   private reconnectTimer: NodeJS.Timeout | undefined;
   private stopped = false;
   private mePhone: string | undefined;
@@ -125,8 +126,12 @@ export class Session {
         .then(() => (socket === this.socket ? auth.saveCreds() : undefined))
         .catch((error: unknown) => this.deps.logger.error({ err: error }, 'saving credentials failed'));
     });
+    // Updates are handled strictly one at a time, in arrival order, so stored state and emitted
+    // events can never be reordered (e.g. "connected" landing after "disconnected").
     socket.onConnectionUpdate((update) => {
-      this.handleUpdate(socket, update).catch((error: unknown) => this.deps.logger.error({ err: error }, 'connection update failed'));
+      this.updates = this.updates
+        .then(() => this.handleUpdate(socket, update))
+        .catch((error: unknown) => this.deps.logger.error({ err: error }, 'connection update failed'));
     });
   }
 

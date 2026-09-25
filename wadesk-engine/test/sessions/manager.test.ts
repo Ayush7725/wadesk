@@ -17,6 +17,8 @@ const PHONE = '919812345678';
 const OTHER_PHONE = '919800000000';
 const WEBHOOK = 'http://chatwoot/webhooks/whatsapp_web/1';
 const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 150 };
+// Generous timeout: these steps take milliseconds, but a busy CI runner or laptop can stall the database briefly.
+const eventually = <T>(assertion: () => T | Promise<T>) => vi.waitFor(assertion, { timeout: 5_000, interval: 10 });
 
 describe('SessionManager', () => {
   const pool = createPool(databaseUrl);
@@ -72,7 +74,7 @@ describe('SessionManager', () => {
 
     socketAt(sockets, 0).update({ qr: 'qr-ref-1' });
 
-    await vi.waitFor(() => expect(statesOf('t-1')).toEqual(['connecting', 'qr_pending']));
+    await eventually(() => expect(statesOf('t-1')).toEqual(['connecting', 'qr_pending']));
     expect(await manager.get('t-1')).toEqual({ state: 'qr_pending', qr: 'qr-ref-1' });
   });
 
@@ -82,7 +84,7 @@ describe('SessionManager', () => {
     socketAt(sockets, 0).update({ qr: 'qr' });
     socketAt(sockets, 0).open(PHONE);
 
-    await vi.waitFor(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
     expect(await manager.get('t-1')).toEqual({ state: 'connected', me: { phone: PHONE } });
     expect(await repository.find('t-1')).toMatchObject({ state: 'connected', meJid: `${PHONE}:7@s.whatsapp.net`, meLid: '123456789:7@lid' });
     expect(events.at(-1)?.event).toEqual({ event: 'connection', state: 'connected', me: { phone: PHONE } });
@@ -93,11 +95,12 @@ describe('SessionManager', () => {
     await manager.upsert('t-1', PHONE, WEBHOOK);
     const socket = socketAt(sockets, 0);
     socket.credsChanged();
-    await vi.waitFor(async () => expect(await credsCount('t-1')).toBe(1));
+    await eventually(async () => expect(await credsCount('t-1')).toBe(1));
 
     socket.open(OTHER_PHONE);
 
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('failed'));
+    // The event is emitted last in a transition, so waiting for it means state and storage are settled.
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('failed'));
     expect(socket.loggedOut).toBe(true);
     expect(socket.ended).toBe(true);
     expect(await credsCount('t-1')).toBe(0);
@@ -108,13 +111,13 @@ describe('SessionManager', () => {
     const { manager, sockets } = build();
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).update({ qr: 'qr' });
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
     expect(await manager.requestPairingCode('t-1')).toBe('ABCD1234');
     expect(socketAt(sockets, 0).pairingRequests).toEqual([PHONE]);
 
     socketAt(sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
     await expect(manager.requestPairingCode('t-1')).rejects.toThrow(SessionStateError);
   });
 
@@ -123,22 +126,22 @@ describe('SessionManager', () => {
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).close(DisconnectReason.restartRequired);
 
-    await vi.waitFor(() => expect(sockets).toHaveLength(2));
+    await eventually(() => expect(sockets).toHaveLength(2));
     socketAt(sockets, 1).open(PHONE);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
   });
 
   it('reconnects automatically after the connection drops', async () => {
     const { manager, sockets } = build();
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
 
     socketAt(sockets, 0).close(DisconnectReason.connectionLost);
 
-    await vi.waitFor(() => expect(sockets).toHaveLength(2));
+    await eventually(() => expect(sockets).toHaveLength(2));
     socketAt(sockets, 1).open(PHONE);
-    await vi.waitFor(() => expect(statesOf('t-1')).toEqual(['connecting', 'connected', 'disconnected', 'connected']));
+    await eventually(() => expect(statesOf('t-1')).toEqual(['connecting', 'connected', 'disconnected', 'connected']));
   });
 
   it('marks the session logged out and wipes credentials when unlinked from the phone', async () => {
@@ -146,11 +149,11 @@ describe('SessionManager', () => {
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).credsChanged();
     socketAt(sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
 
     socketAt(sockets, 0).close(DisconnectReason.loggedOut);
 
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('logged_out'));
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('logged_out'));
     expect(await credsCount('t-1')).toBe(0);
     expect(events.at(-1)?.event).toMatchObject({ state: 'logged_out', reason: 'unlinked_from_phone' });
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -162,7 +165,7 @@ describe('SessionManager', () => {
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).close(DisconnectReason.forbidden);
 
-    await vi.waitFor(async () => expect(await manager.get('t-1')).toEqual({ state: 'failed', lastError: 'forbidden' }));
+    await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'failed', lastError: 'forbidden' }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(sockets).toHaveLength(1);
   });
@@ -171,12 +174,12 @@ describe('SessionManager', () => {
     const { manager, sockets } = build();
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).update({ qr: 'qr' });
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
     await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
 
-    await vi.waitFor(async () => expect(await manager.get('t-1')).toEqual({ state: 'disconnected', lastError: 'qr_expired' }));
+    await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'disconnected', lastError: 'qr_expired' }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(sockets).toHaveLength(1);
   });
@@ -187,7 +190,7 @@ describe('SessionManager', () => {
     await first.manager.upsert('t-2', OTHER_PHONE, WEBHOOK);
     socketAt(first.sockets, 0).credsChanged();
     socketAt(first.sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect(await credsCount('t-1')).toBe(1));
+    await eventually(async () => expect(await credsCount('t-1')).toBe(1));
     first.manager.shutdown();
 
     const second = build();
@@ -195,7 +198,7 @@ describe('SessionManager', () => {
 
     expect(second.sockets).toHaveLength(1); // t-2 never linked, so it has no credentials to resume
     socketAt(second.sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect((await second.manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await second.manager.get('t-1')).state).toBe('connected'));
   });
 
   it('keeps other sessions running when one fails to resume', async () => {
@@ -204,7 +207,7 @@ describe('SessionManager', () => {
       await first.manager.upsert(id, PHONE, WEBHOOK);
     }
     for (const socket of first.sockets) socket.credsChanged();
-    await vi.waitFor(async () => expect((await credsCount('t-bad')) + (await credsCount('t-good'))).toBe(2));
+    await eventually(async () => expect((await credsCount('t-bad')) + (await credsCount('t-good'))).toBe(2));
     first.manager.shutdown();
 
     const second = build({ failAuthFor: 't-bad' });
@@ -229,7 +232,7 @@ describe('SessionManager', () => {
     socketAt(sockets, 0).update({ qr: 'qr' });
     await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('disconnected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('disconnected'));
 
     await manager.upsert('t-1', PHONE, WEBHOOK);
 
@@ -242,7 +245,7 @@ describe('SessionManager', () => {
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).credsChanged();
     socketAt(sockets, 0).open(PHONE);
-    await vi.waitFor(async () => expect((await manager.get('t-1')).state).toBe('connected'));
+    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
 
     await manager.upsert('t-1', OTHER_PHONE, WEBHOOK);
 
@@ -255,7 +258,7 @@ describe('SessionManager', () => {
     const { manager, sockets } = build();
     await manager.upsert('t-1', PHONE, WEBHOOK);
     socketAt(sockets, 0).credsChanged();
-    await vi.waitFor(async () => expect(await credsCount('t-1')).toBe(1));
+    await eventually(async () => expect(await credsCount('t-1')).toBe(1));
 
     await manager.remove('t-1');
 
