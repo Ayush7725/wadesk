@@ -33,6 +33,7 @@
 #
 class Campaign < ApplicationRecord
   include UrlHelper
+  include WhatsappWebCampaignGuard
   validates :account_id, presence: true
   validates :inbox_id, presence: true
   validates :title, presence: true
