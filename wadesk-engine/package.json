@@ -18,11 +18,14 @@
   },
   "dependencies": {
     "fastify": "5.12.5",
+    "node-pg-migrate": "9.0.0",
+    "pg": "8.23.0",
     "pino": "10.3.1"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.6",
+    "@types/pg": "8.23.1",
     "eslint": "10.11.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

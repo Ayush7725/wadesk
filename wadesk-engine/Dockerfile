@@ -12,6 +12,7 @@ ENV NODE_ENV=production
 WORKDIR /engine
 COPY --from=build /engine/node_modules ./node_modules
 COPY --from=build /engine/dist ./dist
+COPY migrations ./migrations
 COPY package.json ./
 USER node
 EXPOSE 4000

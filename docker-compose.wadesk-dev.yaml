@@ -64,6 +64,10 @@ services:
     <<: *toolbox
     profiles: [app]
     working_dir: /app/wadesk-engine
+    environment:
+      <<: *env
+      # Same database as Chatwoot dev, own schema `wadesk_engine` (ADR-0004).
+      WADESK_ENGINE_DATABASE_URL: postgres://postgres@db:5432/chatwoot_dev
     command: sh -c 'pnpm install --frozen-lockfile && pnpm dev'
     ports: ['127.0.0.1:4400:4000']
 

@@ -20,6 +20,21 @@ concurrency:
 jobs:
   engine:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      WADESK_ENGINE_DATABASE_URL: postgres://postgres@localhost:5432/wadesk_engine_test
     defaults:
       run:
         working-directory: wadesk-engine
