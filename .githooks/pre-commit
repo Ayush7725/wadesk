@@ -1,0 +1,3 @@
+#!/bin/sh
+# WaDesk: run Chatwoot's pre-commit checks (.husky/pre-commit) inside the dev toolbox.
+exec "$(git rev-parse --show-toplevel)/bin/wadesk-dev" pre-commit
