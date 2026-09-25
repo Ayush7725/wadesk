@@ -33,9 +33,8 @@ All routes except `/health` need `Authorization: Bearer $WADESK_ENGINE_API_TOKEN
 
 | Route | Result |
 |---|---|
-| `PUT /sessions/:id` `{phone_number, webhook_url}` | `202 {state}` — create or restart; idempotent while live |
-| `GET /sessions/:id` | `{state, qr?, me?, last_error?}` |
-| `POST /sessions/:id/pairing-code` | `{code}`; `409 not_pending` unless waiting to be linked |
+| `PUT /sessions/:id` `{phone_number, webhook_url, link_method?}` | `202 {state}` — create or restart; idempotent while live. `link_method`: `qr` (default) or `code` |
+| `GET /sessions/:id` | `{state, qr?, pairing_code?, me?, last_error?}` — in `code` mode `pairing_code` is always the currently valid code |
 | `DELETE /sessions/:id` | `204` — logs out and wipes credentials |
 | `GET /health` | `{status: "ok"}` or `503` when the database is down |
 

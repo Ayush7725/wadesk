@@ -1,4 +1,5 @@
 import type { ConnectionState } from 'baileys';
+import type { LinkMethod } from '../../src/sessions/types.js';
 import type { SocketFactory, WaSocket } from '../../src/whatsapp/socket.js';
 
 // In-memory stand-in for a Baileys socket; tests drive it with connection updates.
@@ -7,6 +8,7 @@ export class FakeSocket implements WaSocket {
   loggedOut = false;
   ended = false;
   pairingRequests: string[] = [];
+  constructor(readonly linkMethod: LinkMethod) {}
   private connectionListeners: ((update: Partial<ConnectionState>) => void)[] = [];
   private credsListeners: (() => void)[] = [];
 
@@ -20,7 +22,7 @@ export class FakeSocket implements WaSocket {
 
   requestPairingCode(phoneNumber: string): Promise<string> {
     this.pairingRequests.push(phoneNumber);
-    return Promise.resolve('ABCD1234');
+    return Promise.resolve(`CODE${String(this.pairingRequests.length).padStart(4, '0')}`);
   }
 
   logout(): Promise<void> {
@@ -52,8 +54,8 @@ export class FakeSocket implements WaSocket {
 
 export function fakeSocketFactory(): { factory: SocketFactory; sockets: FakeSocket[] } {
   const sockets: FakeSocket[] = [];
-  const factory: SocketFactory = () => {
-    const socket = new FakeSocket();
+  const factory: SocketFactory = (_auth, _logger, linkMethod) => {
+    const socket = new FakeSocket(linkMethod);
     sockets.push(socket);
     return socket;
   };

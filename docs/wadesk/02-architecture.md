@@ -148,9 +148,8 @@ Base URL `WADESK_ENGINE_URL` (internal). Header `Authorization: Bearer ${WADESK_
 
 | Method & path | Purpose | Response |
 |---|---|---|
-| `PUT /sessions/:id` `{phone_number, webhook_url}` | Create or restart a session (idempotent) | `202 {state}` |
-| `GET /sessions/:id` | Current state (+ live QR while pending) | `{state, qr?, me?, last_error?}` |
-| `POST /sessions/:id/pairing-code` | Request pairing code (WW-FR-03) | `{code}` |
+| `PUT /sessions/:id` `{phone_number, webhook_url, link_method?}` | Create or restart a session (idempotent while live). `link_method`: `qr` (default) or `code` (ADR-0007) | `202 {state}` |
+| `GET /sessions/:id` | Current state (+ live QR, or current pairing code in `code` mode, while pending) | `{state, qr?, pairing_code?, me?, last_error?}` |
 | `DELETE /sessions/:id` | Log out and wipe credentials | `204` |
 | `POST /sessions/:id/messages` (multipart) | Send text or one file, optional `reply_to` | `201 {id}` |
 | `GET /sessions/:id/media/:message_id` | Stream decrypted media | binary + `Content-Type`, `Content-Disposition` |
@@ -191,7 +190,7 @@ available the message is still delivered with `wa_id` = LID and linked later whe
 | Store | Owner | Contents |
 |---|---|---|
 | `channel_whatsapp.provider_config` (existing jsonb) | Chatwoot | `{ "connection_state", "connected_at", "last_error" }` — no secrets |
-| `wadesk_engine.sessions` | Engine | `id, expected_phone, webhook_url, state, me_jid, me_lid, updated_at` |
+| `wadesk_engine.sessions` | Engine | `id, expected_phone, webhook_url, link_method, state, me_jid, me_lid, updated_at` |
 | `wadesk_engine.auth_keys` | Engine | `session_id, key, value_encrypted` (Baileys creds + signal keys) |
 | `wadesk_engine.messages` | Engine | `session_id, message_id, meta_json, created_at` (30-day retention; no text bodies) |
 | `wadesk_engine.outbox` | Engine | `id, session_id, webhook_url, payload, attempts, next_attempt_at` (URL stored per event so final events survive session deletion) |

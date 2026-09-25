@@ -1,6 +1,6 @@
 # ADR-0006: WhatsApp Safety Layer
 
-- **Status:** Proposed (Change request CR-001) · **Date:** 2026-09-25
+- **Status:** Accepted (Change request CR-001, approved 2026-09-25) · **Date:** 2026-09-25
 
 ## Context
 WhatsApp restricts or bans numbers based on behaviour signals it does not publish in detail: users blocking and

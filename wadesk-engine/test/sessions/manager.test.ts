@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 import { createCipher } from '../../src/auth/cipher.js';
 import { usePostgresAuthState } from '../../src/auth/postgres-auth-state.js';
 import { createPool } from '../../src/db/pool.js';
-import { SessionNotFoundError, SessionStateError } from '../../src/sessions/errors.js';
+import { SessionNotFoundError } from '../../src/sessions/errors.js';
 import { SessionManager } from '../../src/sessions/manager.js';
 import { SessionRepository } from '../../src/sessions/repository.js';
 import type { SessionTiming } from '../../src/sessions/session.js';
@@ -16,7 +16,9 @@ import { fakeSocketFactory } from '../support/fake-socket.js';
 const PHONE = '919812345678';
 const OTHER_PHONE = '919800000000';
 const WEBHOOK = 'http://chatwoot/webhooks/whatsapp_web/1';
-const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 150 };
+// Long QR limit by default so slow CI runners never hit it by accident; QR-expiry tests use SHORT_QR explicitly.
+const FAST: SessionTiming = { baseBackoffMs: 5, maxBackoffMs: 20, qrTimeoutMs: 60_000 };
+const SHORT_QR: SessionTiming = { ...FAST, qrTimeoutMs: 150 };
 // Generous timeout: these steps take milliseconds, but a busy CI runner or laptop can stall the database briefly.
 const eventually = <T>(assertion: () => T | Promise<T>) => vi.waitFor(assertion, { timeout: 5_000, interval: 10 });
 
@@ -27,7 +29,7 @@ describe('SessionManager', () => {
   let events: { sessionId: string; event: ConnectionEvent }[];
   let managers: SessionManager[];
 
-  const build = (overrides: { failAuthFor?: string } = {}) => {
+  const build = (overrides: { failAuthFor?: string; timing?: SessionTiming } = {}) => {
     const { factory, sockets } = fakeSocketFactory();
     const sink = events; // bound now, so late events from an earlier test never leak into this one
     const manager = new SessionManager({
@@ -42,7 +44,7 @@ describe('SessionManager', () => {
         },
       },
       logger: pino({ level: 'silent' }),
-      timing: FAST,
+      timing: overrides.timing ?? FAST,
     });
     managers.push(manager);
     return { manager, sockets };
@@ -69,7 +71,7 @@ describe('SessionManager', () => {
 
   it('offers a QR code for a new session', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     expect((await manager.get('t-1')).state).toBe('connecting');
 
     socketAt(sockets, 0).update({ qr: 'qr-ref-1' });
@@ -80,7 +82,7 @@ describe('SessionManager', () => {
 
   it('connects when the expected number links and stores its identity', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
     socketAt(sockets, 0).open(PHONE);
 
@@ -92,7 +94,7 @@ describe('SessionManager', () => {
 
   it('rejects a different phone, unlinks it and forgets its credentials', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     const socket = socketAt(sockets, 0);
     socket.credsChanged();
     await eventually(async () => expect(await credsCount('t-1')).toBe(1));
@@ -107,23 +109,99 @@ describe('SessionManager', () => {
     expect(events.at(-1)?.event).toEqual({ event: 'connection', state: 'failed', reason: 'number_mismatch' });
   });
 
-  it('requests a pairing code for the expected number only while waiting to link', async () => {
+  it('labels QR-linked devices as WaDesk and never shows pairing codes in QR mode', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
-    await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
-    expect(await manager.requestPairingCode('t-1')).toBe('ABCD1234');
-    expect(socketAt(sockets, 0).pairingRequests).toEqual([PHONE]);
+    await eventually(() => expect(statesOf('t-1')).toEqual(['connecting', 'qr_pending']));
+    expect(socketAt(sockets, 0).linkMethod).toBe('qr');
+    expect(socketAt(sockets, 0).pairingRequests).toEqual([]);
+  });
 
+  it('requests a pairing code automatically in code mode, once per connection', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    const socket = socketAt(sockets, 0);
+    socket.update({ qr: 'qr-1' });
+    socket.update({ qr: 'qr-2' }); // QR rotation on the same connection keeps the same code
+
+    await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'qr_pending', pairingCode: 'CODE0001' }));
+    expect(socket.linkMethod).toBe('code');
+    expect(socket.pairingRequests).toEqual([PHONE]);
+  });
+
+  it('issues a fresh pairing code after the connection is replaced', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    socketAt(sockets, 0).update({ qr: 'qr' });
+    await eventually(async () => expect((await manager.get('t-1')).pairingCode).toBe('CODE0001'));
+
+    socketAt(sockets, 0).close(DisconnectReason.timedOut);
+    await eventually(() => expect(sockets).toHaveLength(2));
+    socketAt(sockets, 1).update({ qr: 'qr' });
+
+    await eventually(async () => expect((await manager.get('t-1')).pairingCode).toBe('CODE0001'));
+    expect(socketAt(sockets, 1).pairingRequests).toEqual([PHONE]);
+  });
+
+  it('retries with fresh credentials when an unused link attempt expires', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    socketAt(sockets, 0).credsChanged();
+    socketAt(sockets, 0).update({ qr: 'qr' });
+    await eventually(async () => expect(await credsCount('t-1')).toBe(1));
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('qr_pending'));
+
+    socketAt(sockets, 0).close(DisconnectReason.loggedOut); // how WhatsApp ends an expired pairing code
+
+    await eventually(() => expect(sockets).toHaveLength(2));
+    expect(await credsCount('t-1')).toBe(0);
+    socketAt(sockets, 1).update({ qr: 'qr' });
+    await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'qr_pending', pairingCode: 'CODE0001' }));
+    expect(statesOf('t-1')).not.toContain('logged_out');
+  });
+
+  it('clears the pairing code once linked', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    socketAt(sockets, 0).update({ qr: 'qr' });
     socketAt(sockets, 0).open(PHONE);
-    await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
-    await expect(manager.requestPairingCode('t-1')).rejects.toThrow(SessionStateError);
+
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
+    expect(await manager.get('t-1')).toEqual({ state: 'connected', me: { phone: PHONE } });
+  });
+
+  it('restarts linking when the admin switches method before linking', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+
+    expect(sockets.map((socket) => socket.linkMethod)).toEqual(['qr', 'code']);
+    expect(socketAt(sockets, 0).loggedOut).toBe(false);
+    expect((await repository.find('t-1'))?.linkMethod).toBe('code');
+  });
+
+  it('ignores a method switch once connected and reconnects with the method it was linked by', async () => {
+    const first = build();
+    await first.manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    socketAt(first.sockets, 0).credsChanged();
+    socketAt(first.sockets, 0).open(PHONE);
+    await eventually(() => expect(statesOf('t-1').at(-1)).toBe('connected'));
+
+    await first.manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+    expect(first.sockets).toHaveLength(1);
+    first.manager.shutdown();
+
+    const second = build();
+    await second.manager.resumeAll();
+    expect(socketAt(second.sockets, 0).linkMethod).toBe('code');
   });
 
   it('restarts the socket when WhatsApp requires it after linking', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).close(DisconnectReason.restartRequired);
 
     await eventually(() => expect(sockets).toHaveLength(2));
@@ -133,7 +211,7 @@ describe('SessionManager', () => {
 
   it('reconnects automatically after the connection drops', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).open(PHONE);
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
 
@@ -146,7 +224,7 @@ describe('SessionManager', () => {
 
   it('marks the session logged out and wipes credentials when unlinked from the phone', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).credsChanged();
     socketAt(sockets, 0).open(PHONE);
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
@@ -162,7 +240,7 @@ describe('SessionManager', () => {
 
   it('stops without reconnecting when WhatsApp forbids the connection', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).close(DisconnectReason.forbidden);
 
     await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'failed', lastError: 'forbidden' }));
@@ -171,12 +249,12 @@ describe('SessionManager', () => {
   });
 
   it('stops offering QR codes after the QR timeout', async () => {
-    const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    const { manager, sockets } = build({ timing: SHORT_QR });
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
-    await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
+    await new Promise((resolve) => setTimeout(resolve, SHORT_QR.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
 
     await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'disconnected', lastError: 'qr_expired' }));
@@ -186,8 +264,8 @@ describe('SessionManager', () => {
 
   it('resumes linked sessions after an engine restart without a new QR code', async () => {
     const first = build();
-    await first.manager.upsert('t-1', PHONE, WEBHOOK);
-    await first.manager.upsert('t-2', OTHER_PHONE, WEBHOOK);
+    await first.manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+    await first.manager.upsert('t-2', OTHER_PHONE, WEBHOOK, 'qr');
     socketAt(first.sockets, 0).credsChanged();
     socketAt(first.sockets, 0).open(PHONE);
     await eventually(async () => expect(await credsCount('t-1')).toBe(1));
@@ -204,7 +282,7 @@ describe('SessionManager', () => {
   it('keeps other sessions running when one fails to resume', async () => {
     const first = build();
     for (const id of ['t-bad', 't-good']) {
-      await first.manager.upsert(id, PHONE, WEBHOOK);
+      await first.manager.upsert(id, PHONE, WEBHOOK, 'qr');
     }
     for (const socket of first.sockets) socket.credsChanged();
     await eventually(async () => expect((await credsCount('t-bad')) + (await credsCount('t-good'))).toBe(2));
@@ -219,22 +297,22 @@ describe('SessionManager', () => {
 
   it('is idempotent while the same number is live', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
-    await manager.upsert('t-1', PHONE, 'http://new-webhook');
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+    await manager.upsert('t-1', PHONE, 'http://new-webhook', 'qr');
 
     expect(sockets).toHaveLength(1);
     expect((await repository.find('t-1'))?.webhookUrl).toBe('http://new-webhook');
   });
 
   it('reconnects a dropped session with its stored credentials instead of unlinking it', async () => {
-    const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    const { manager, sockets } = build({ timing: SHORT_QR });
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).update({ qr: 'qr' });
-    await new Promise((resolve) => setTimeout(resolve, FAST.qrTimeoutMs + 10));
+    await new Promise((resolve) => setTimeout(resolve, SHORT_QR.qrTimeoutMs + 10));
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('disconnected'));
 
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
 
     expect(socketAt(sockets, 0).loggedOut).toBe(false);
     expect(sockets).toHaveLength(2);
@@ -242,12 +320,12 @@ describe('SessionManager', () => {
 
   it('unlinks the old device when the number changes', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).credsChanged();
     socketAt(sockets, 0).open(PHONE);
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('connected'));
 
-    await manager.upsert('t-1', OTHER_PHONE, WEBHOOK);
+    await manager.upsert('t-1', OTHER_PHONE, WEBHOOK, 'qr');
 
     expect(socketAt(sockets, 0).loggedOut).toBe(true);
     expect((await repository.find('t-1'))?.expectedPhone).toBe(OTHER_PHONE);
@@ -256,7 +334,7 @@ describe('SessionManager', () => {
 
   it('removes a session, logging it out and deleting its credentials', async () => {
     const { manager, sockets } = build();
-    await manager.upsert('t-1', PHONE, WEBHOOK);
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
     socketAt(sockets, 0).credsChanged();
     await eventually(async () => expect(await credsCount('t-1')).toBe(1));
 

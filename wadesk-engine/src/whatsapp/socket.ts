@@ -1,5 +1,6 @@
 import makeWASocket, { makeCacheableSignalKeyStore, type AuthenticationState, type ConnectionState } from 'baileys';
 import type { Logger } from 'pino';
+import type { LinkMethod } from '../sessions/types.js';
 
 // The only module that creates Baileys sockets. Everything else depends on WaSocket, so tests can use a fake
 // and Baileys upgrades stay contained here (ADR-0002).
@@ -12,16 +13,21 @@ export interface WaSocket {
   end(): void;
 }
 
-export type SocketFactory = (auth: AuthenticationState, logger: Logger) => WaSocket;
+export type SocketFactory = (auth: AuthenticationState, logger: Logger, linkMethod: LinkMethod) => WaSocket;
 
-// Honest device name: the business sees "WaDesk" under Linked devices on the phone.
-const BROWSER: [string, string, string] = ['WaDesk', 'Chrome', '1.0'];
+// Device label shown under Linked devices on the business's phone (ADR-0007). QR links show "WaDesk".
+// WhatsApp's pairing-code flow rejects custom labels, so code links use a standard browser label;
+// the setup screen tells the admin which name to expect.
+const BROWSERS: Record<LinkMethod, [string, string, string]> = {
+  qr: ['WaDesk', 'Chrome', '1.0'],
+  code: ['Ubuntu', 'Chrome', '22.04.4'],
+};
 
-export const createBaileysSocket: SocketFactory = (auth, logger) => {
+export const createBaileysSocket: SocketFactory = (auth, logger, linkMethod) => {
   const socket = makeWASocket({
     auth: { creds: auth.creds, keys: makeCacheableSignalKeyStore(auth.keys, logger) },
     logger,
-    browser: BROWSER,
+    browser: BROWSERS[linkMethod],
     markOnlineOnConnect: false,
     syncFullHistory: false,
   });

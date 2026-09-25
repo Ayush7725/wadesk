@@ -6,6 +6,5 @@ export const AUTH = { authorization: `Bearer ${API_TOKEN}` };
 export const unusedSessions: SessionService = {
   upsert: () => Promise.reject(new Error('unused')),
   get: () => Promise.reject(new Error('unused')),
-  requestPairingCode: () => Promise.reject(new Error('unused')),
   remove: () => Promise.reject(new Error('unused')),
 };

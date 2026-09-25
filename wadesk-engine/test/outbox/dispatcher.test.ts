@@ -60,7 +60,7 @@ describe('outbox delivery', () => {
     dispatchers = [];
     await pool.query("DELETE FROM wadesk_engine.outbox WHERE session_id LIKE 'o-%'");
     await pool.query("DELETE FROM wadesk_engine.sessions WHERE id LIKE 'o-%'");
-    for (const id of ['o-1', 'o-2']) await repository.upsert(id, '919812345678', `${baseUrl}/webhooks/whatsapp_web/${id}`);
+    for (const id of ['o-1', 'o-2']) await repository.upsert(id, '919812345678', `${baseUrl}/webhooks/whatsapp_web/${id}`, 'qr');
   });
 
   afterEach(async () => {

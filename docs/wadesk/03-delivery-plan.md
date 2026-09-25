@@ -22,6 +22,8 @@ Goal: a working, repeatable engineering setup before any feature code.
 **Acceptance:** a trivial PR runs CI (Chatwoot specs + engine tests) and merges; `docker compose up` starts Chatwoot + engine locally.
 
 ### M1 — Engine: session lifecycle
+
+**Status:** acceptance run 2026-09-25 ([record](acceptance/M1.md)); Gate B pending; wrong-number check deferred to M2 acceptance.
 Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 
 | Task | Output |
@@ -31,6 +33,7 @@ Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 | M1.3 `Session` + `SessionManager`: connect, QR, pairing code, expected-number check, reconnect backoff, logout, boot restore | Unit tests with mocked Baileys adapter |
 | M1.4 REST API (`PUT/GET/DELETE /sessions/:id`, `pairing-code`) with bearer auth and schema validation | API tests |
 | M1.5 Outbox + dispatcher with HMAC signing and retry/backoff; `connection` events | Tests for retry, ordering per session, restart recovery |
+| M1.6 Pairing-code mode from acceptance findings: `link_method`, fresh code per connection, expired attempts retried, device label per ADR-0007 | Lifecycle + API tests; verified on a real phone |
 
 **Acceptance:** with curl only, a real test number links via QR and via pairing code; wrong number is rejected;
 engine restart restores the session without a new QR; unlinking from the phone produces a `logged_out` webhook.

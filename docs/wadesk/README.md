@@ -11,7 +11,8 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [01-requirements.md](01-requirements.md) | What Step 1 must do (functional + non-functional requirements) | Approved 2026-09-25 |
 | [02-architecture.md](02-architecture.md) | How it is built: components, contracts, data flows | Approved 2026-09-25 |
 | [03-delivery-plan.md](03-delivery-plan.md) | Milestones, tasks, acceptance criteria, test strategy | Approved 2026-09-25 |
-| [04-safety-requirements.md](04-safety-requirements.md) | WhatsApp Safety Layer requirements and phasing | Draft — CR-001 |
+| [04-safety-requirements.md](04-safety-requirements.md) | WhatsApp Safety Layer requirements and phasing | Approved 2026-09-25 (CR-001) |
+| [acceptance/](acceptance/) | Milestone acceptance records (Gate B) | M1 |
 | [adr/](adr/) | Architecture Decision Records — one file per significant decision | See index below |
 
 ### ADR index
@@ -23,7 +24,8 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [0003](adr/0003-baileys-as-chatwoot-provider.md) | Integrate as a `baileys` provider of `Channel::Whatsapp`, reusing the incoming pipeline | Accepted |
 | [0004](adr/0004-session-state-in-postgres.md) | Store WhatsApp session credentials in Postgres | Accepted |
 | [0005](adr/0005-plan-gating-with-feature-flags.md) | Gate channel types per account with Chatwoot feature flags | Accepted |
-| [0006](adr/0006-whatsapp-safety-layer.md) | WhatsApp Safety Layer; Web connections are conversations-only | Proposed (CR-001) |
+| [0006](adr/0006-whatsapp-safety-layer.md) | WhatsApp Safety Layer; Web connections are conversations-only | Accepted (CR-001) |
+| [0007](adr/0007-device-label-per-link-method.md) | Device label depends on link method (QR "WaDesk", code "Chrome (Ubuntu)") | Accepted |
 
 ## Development process (SDLC)
 
@@ -41,7 +43,7 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 
 | CR | Title | Status |
 |---|---|---|
-| CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Awaiting approval |
+| CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Approved 2026-09-25 |
 
 ### Branching and pull requests
 
