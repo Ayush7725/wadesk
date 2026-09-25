@@ -54,6 +54,22 @@ describe WhatsappWeb::EngineClient do
     expect(stub).to have_been_requested
   end
 
+  it 'builds well-formed multipart uploads when a file is attached' do
+    stub_request(:post, 'http://engine:4000/sessions/7/messages').to_return(
+      status: 201, body: { id: 'X' }.to_json, headers: { 'Content-Type' => 'application/json' }
+    )
+    file = described_class::UploadPart.new(StringIO.new('%PDF'), 'quote.pdf', 'application/pdf')
+
+    with_modified_env(env) { client.send_message(7, { to: '919876543210', text: 'Quotation', file: file }) }
+
+    # Every part's headers must end with a blank line before its value (HTTParty's streaming mode got this wrong).
+    expect(WebMock).to(have_requested(:post, 'http://engine:4000/sessions/7/messages').with do |req|
+      body = req.body.b
+      body.include?("name=\"to\"\r\n\r\n919876543210\r\n") && body.include?("name=\"text\"\r\n\r\nQuotation\r\n") &&
+        body.include?("filename=\"quote.pdf\"\r\nContent-Type: application/pdf\r\n\r\n%PDF\r\n")
+    end)
+  end
+
   it 'treats deleting an unknown session as done' do
     stub_request(:delete, 'http://engine:4000/sessions/42')
       .to_return(status: 404, body: { error: { code: 'session_not_found', message: 'Session 42 not found' } }.to_json,

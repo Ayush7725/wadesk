@@ -63,7 +63,7 @@ New files (no upstream conflicts):
 |---|---|
 | `app/models/concerns/whatsapp_web_channel.rb` | Included in `Channel::Whatsapp`: plan gating (on create), default `link_method`, start engine session after create, remove it before destroy |
 | `app/jobs/whatsapp_web/start_session_job.rb` | Starts/restarts the engine session in the background (retried by Sidekiq) |
-| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: validates `link_method`; `sync_templates` only marks the sync (no templates on WhatsApp Web); `media_url`/`api_headers` point attachment downloads at the engine; `send_message` in M3 |
+| `app/services/whatsapp/providers/whatsapp_baileys_service.rb` | Provider: validates `link_method`; `sync_templates` only marks the sync (no templates on WhatsApp Web); `media_url`/`api_headers` point attachment downloads at the engine; `send_message` uploads text + first attachment + quote preview to the engine (rate limits and engine errors raise so `SendReplyJob` retries; other failures mark the message failed with an agent-facing reason) |
 | `app/services/whatsapp_web/engine_client.rb` | Thin HTTP client for the engine API (auth header, timeouts, error mapping) |
 | `app/services/whatsapp_web/session_lifecycle_service.rb` | Start / reconnect / logout / delete sessions |
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
