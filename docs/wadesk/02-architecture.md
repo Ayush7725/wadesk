@@ -68,7 +68,7 @@ New files (no upstream conflicts):
 | `app/services/whatsapp_web/engine_client.rb` | Thin HTTP client for the engine API (auth header, timeouts, error mapping) |
 | `app/services/whatsapp_web/session_lifecycle_service.rb` | Start / reconnect / logout / delete sessions |
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
-| `app/jobs/whatsapp_web/connection_update_job.rb` | Persists connection state, notifies admins |
+| `app/services/whatsapp_web/connection_update_service.rb` | Persists connection state on the channel (`provider_config.connection_state/reason/connected_phone`). Runs inline in the webhook request so events apply in the engine's order; admin notifications in M4.4 |
 | `app/controllers/api/v1/accounts/whatsapp_web/sessions_controller.rb` | QR / pairing code / reconnect / logout for the UI |
 | `app/services/wadesk/safety/new_chat_limit_service.rb` | Daily business-initiated chat cap for Web inboxes (SAFE-FR-02), checked before `send_message` |
 | `app/services/wadesk/safety/opt_out_detector.rb` + `app/models/wadesk/consent_event.rb` | Opt-out keyword detection on incoming messages; append-only consent events (SAFE-FR-10/11) |
@@ -114,7 +114,7 @@ Admin UI           Chatwoot                          Engine                     
    │ (phone scans)    │                                  │◀──── pair success (me.id) ───│
    │                  │                                  │ me.phone == expected? else logout + state=failed
    │                  │◀── webhook connection{connected}─│                              │
-   │◀── "Connected" ──│ ConnectionUpdateJob → provider_config.state, broadcast          │
+   │◀── "Connected" ──│ ConnectionUpdateService (inline) → provider_config.connection_state │
 ```
 
 QR codes are never persisted; they are read live from the engine.
@@ -127,7 +127,7 @@ WhatsApp ─▶ Engine: messages.upsert
             ├─ MessageStore.save(meta)             (for media + quotes)
             ├─ Normalizer → contract payload (§4.2)
             └─ Outbox.insert ─▶ Dispatcher ─▶ POST /webhooks/whatsapp_web/:channel_id (HMAC)
-Chatwoot controller: verify HMAC → Webhooks::WhatsappEventsJob (existing, per-sender lock)
+Chatwoot controller: verify HMAC (5-min replay window) → Webhooks::WhatsappEventsJob (existing, per-sender lock)
             └─ IncomingMessageBaileysService (inherits dedup by source_id, contact + conversation rules)
                  └─ attachments: GET engine /sessions/:id/media/:message_id
 ```
