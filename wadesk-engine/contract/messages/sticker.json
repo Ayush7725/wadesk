@@ -1,0 +1,23 @@
+{
+  "event": "messages",
+  "contacts": [
+    {
+      "wa_id": "919876543210",
+      "profile": {
+        "name": "Ravi Kumar"
+      }
+    }
+  ],
+  "messages": [
+    {
+      "id": "3EB0A1B2C3D4E5F6",
+      "from": "919876543210",
+      "timestamp": "1790000000",
+      "type": "sticker",
+      "sticker": {
+        "id": "3EB0A1B2C3D4E5F6",
+        "mime_type": "image/webp"
+      }
+    }
+  ]
+}

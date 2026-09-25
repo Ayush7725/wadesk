@@ -1,0 +1,22 @@
+{
+  "event": "messages",
+  "contacts": [
+    {
+      "user_id": "123456789012345@lid",
+      "profile": {
+        "name": "Ravi Kumar"
+      }
+    }
+  ],
+  "messages": [
+    {
+      "id": "3EB0A1B2C3D4E5F6",
+      "from": "123456789012345@lid",
+      "timestamp": "1790000000",
+      "type": "text",
+      "text": {
+        "body": "Hello"
+      }
+    }
+  ]
+}
