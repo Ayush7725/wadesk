@@ -69,7 +69,7 @@ New files (no upstream conflicts):
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
 | `app/services/whatsapp_web/connection_update_service.rb` | Persists connection state on the channel (`provider_config.connection_state/reason/connected_phone`). Runs inline in the webhook request so events apply in the engine's order; admin notifications in M4.4 |
 | `app/controllers/api/v1/accounts/whatsapp_web/sessions_controller.rb` | QR / pairing code / reconnect / logout for the UI |
-| `app/services/wadesk/safety/new_chat_limit_service.rb` | Daily business-initiated chat cap for Web inboxes (SAFE-FR-02), checked before `send_message` |
+| `app/services/wadesk/safety/new_chat_limit.rb` | Business-initiated chat cap for Web inboxes (SAFE-FR-02): rolling 24 h, default 20, operator override in `account.custom_attributes['wadesk_whatsapp_web_daily_new_chats']` (account admins cannot set it); checked in the provider before sending |
 | `app/services/wadesk/safety/opt_out_detector.rb` + `app/models/wadesk/consent_event.rb` | Opt-out keyword detection on incoming messages; append-only consent events (SAFE-FR-10/11) |
 | `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/WhatsappWeb.vue` (+ components) | Create inbox + QR panel |
 | Specs under `spec/` mirroring the above | |

@@ -10,12 +10,14 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
   # Sends through the engine (WW-FR-20/21/22). Rate limits and engine trouble raise, so the send job retries
   # later (queued, never dropped: SAFE-FR-03); anything else fails the message with a reason agents can act on.
   def send_message(phone_number, message)
+    limit = Wadesk::Safety::NewChatLimit.new(message: message)
+    return fail_message(message, new_chat_limit_reason(limit.daily_limit)) if limit.exceeded?
+
     WhatsappWeb::EngineClient.new.send_message(whatsapp_channel.id, message_parts(phone_number, message))
   rescue WhatsappWeb::EngineClient::Error => e
     raise if e.retryable?
 
-    message.update!(status: :failed, external_error: AGENT_ERRORS.fetch(e.code, e.message))
-    nil
+    fail_message(message, AGENT_ERRORS.fetch(e.code, e.message))
   end
 
   # No credentials to verify: the number is linked later by QR code or pairing code.
@@ -39,6 +41,16 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
   end
 
   private
+
+  def fail_message(message, reason)
+    message.update!(status: :failed, external_error: reason)
+    nil
+  end
+
+  def new_chat_limit_reason(limit)
+    "This number already started #{limit} new chats in the last 24 hours, the limit for WhatsApp Web. " \
+      'Replies to customers who wrote to you are not affected. Try later, or use an Official WhatsApp inbox for outreach.'
+  end
 
   # Like the Cloud provider, only the first attachment is sent; the text becomes its caption.
   def message_parts(phone_number, message)
