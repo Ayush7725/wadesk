@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_22_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_26_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1656,6 +1656,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_22_000000) do
     t.index ["pubsub_token"], name: "index_users_on_pubsub_token", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true
+  end
+
+  create_table "wadesk_consent_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "user_id"
+    t.integer "kind", null: false
+    t.string "purpose", default: "marketing", null: false
+    t.string "source", null: false
+    t.string "evidence", limit: 255
+    t.datetime "created_at", null: false
+    t.index ["account_id", "contact_id", "created_at"], name: "index_wadesk_consent_events_on_contact_history"
   end
 
   create_table "webhooks", force: :cascade do |t|

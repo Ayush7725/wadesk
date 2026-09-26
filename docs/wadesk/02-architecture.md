@@ -70,7 +70,7 @@ New files (no upstream conflicts):
 | `app/services/whatsapp_web/connection_update_service.rb` | Persists connection state on the channel (`provider_config.connection_state/reason/connected_phone`). Runs inline in the webhook request so events apply in the engine's order; admin notifications in M4.4 |
 | `app/controllers/api/v1/accounts/whatsapp_web/sessions_controller.rb` | QR / pairing code / reconnect / logout for the UI |
 | `app/services/wadesk/safety/new_chat_limit.rb` | Business-initiated chat cap for Web inboxes (SAFE-FR-02): rolling 24 h, default 20, operator override in `account.custom_attributes['wadesk_whatsapp_web_daily_new_chats']` (account admins cannot set it); checked in the provider before sending |
-| `app/services/wadesk/safety/opt_out_detector.rb` + `app/models/wadesk/consent_event.rb` | Opt-out keyword detection on incoming messages; append-only consent events (SAFE-FR-10/11) |
+| `app/services/wadesk/safety/opt_out_detector.rb`, `app/listeners/wadesk/opt_out_listener.rb`, `app/models/wadesk/consent_event.rb` | Whole-message opt-out phrases (English, Hinglish, Hindi; operator override `WADESK_OPT_OUT_KEYWORDS`) on incoming WhatsApp messages → append-only `wadesk_consent_events` + activity note for agents (SAFE-FR-10/11) |
 | `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/WhatsappWeb.vue` (+ components) | Create inbox + QR panel |
 | Specs under `spec/` mirroring the above | |
 
@@ -92,6 +92,9 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |
+| `app/dispatchers/async_dispatcher.rb` | Registers `Wadesk::OptOutListener` |
+| `db/migrate/*_create_wadesk_consent_events.rb`, `db/schema.rb` | `wadesk_consent_events` table |
+| `config/locales/en.yml` | `wadesk.consent.*` strings |
 | `lib/regex_helper.rb` | `WHATSAPP_CHANNEL_REGEX` also accepts WhatsApp Web privacy IDs (`<digits>@lid`) as contact source ids |
 | `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
