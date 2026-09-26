@@ -34,6 +34,29 @@ RSpec.describe 'Webhooks::WhatsappWebController', type: :request do
     expect(channel.reload.provider_config).to include('connection_state' => 'logged_out', 'connection_reason' => 'unlinked_from_phone')
   end
 
+  describe 'alerting administrators (WW-FR-08)' do
+    it 'flags the inbox and emails admins when the phone unlinks WaDesk' do
+      expect { deliver(channel.id, { event: 'connection', state: 'logged_out', reason: 'unlinked_from_phone' }.to_json) }
+        .to have_enqueued_mail(AdministratorNotifications::ChannelNotificationsMailer, :whatsapp_disconnect)
+
+      expect(channel.reload.reauthorization_required?).to be true
+    end
+
+    it 'clears the flag once the number is linked again' do
+      channel.prompt_reauthorization!
+
+      deliver(channel.id, body)
+
+      expect(channel.reload.reauthorization_required?).to be false
+    end
+
+    it 'does not alert on brief connection drops' do
+      deliver(channel.id, { event: 'connection', state: 'disconnected', reason: 'connection_lost' }.to_json)
+
+      expect(channel.reload.reauthorization_required?).to be false
+    end
+  end
+
   it 'rejects a wrong signature' do
     deliver(channel.id, body, signature: sign(body, timestamp, 'another-secret'))
 

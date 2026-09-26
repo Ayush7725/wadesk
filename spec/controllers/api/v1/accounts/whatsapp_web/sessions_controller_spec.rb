@@ -49,6 +49,7 @@ RSpec.describe 'WhatsApp Web session API', type: :request do
 
     expect(response.parsed_body).to include('state' => 'logged_out')
     expect(channel.reload.provider_config).to include('connection_state' => 'logged_out', 'connection_reason' => 'logged_out_by_admin')
+    expect(channel.reauthorization_required?).to be false # deliberate, so no alert
   end
 
   it 'answers 502 when the engine is unavailable' do

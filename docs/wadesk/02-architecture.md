@@ -67,7 +67,7 @@ New files (no upstream conflicts):
 | `app/services/whatsapp_web/engine_client.rb` | Thin HTTP client for the engine API (auth header, timeouts, error mapping) |
 | `app/services/whatsapp_web/session_lifecycle_service.rb` | Start / reconnect / logout / delete sessions |
 | `app/controllers/webhooks/whatsapp_web_controller.rb` | Receives engine webhooks, verifies HMAC, routes events |
-| `app/services/whatsapp_web/connection_update_service.rb` | Persists connection state on the channel (`provider_config.connection_state/reason/connected_phone`). Runs inline in the webhook request so events apply in the engine's order; admin notifications in M4.4 |
+| `app/services/whatsapp_web/connection_update_service.rb` | Persists connection state on the channel (`provider_config.connection_state/reason/connected_phone`). Runs inline in the webhook request so events apply in the engine's order. Unlinked-from-phone / forbidden trigger Chatwoot's reauthorization flow (admin email + sidebar flag); linking again clears it |
 | `app/controllers/api/v1/accounts/whatsapp_web/sessions_controller.rb` | `GET/DELETE /inboxes/:id/whatsapp_web_session`, `POST …/reconnect`: live state with QR or pairing code, re-link (optionally switching method), log out; inbox administrators only |
 | `app/services/wadesk/safety/new_chat_limit.rb` | Business-initiated chat cap for Web inboxes (SAFE-FR-02): rolling 24 h, default 20, operator override in `account.custom_attributes['wadesk_whatsapp_web_daily_new_chats']` (account admins cannot set it); checked in the provider before sending |
 | `app/services/wadesk/safety/opt_out_detector.rb`, `app/listeners/wadesk/opt_out_listener.rb`, `app/models/wadesk/consent_event.rb` | Whole-message opt-out phrases (English, Hinglish, Hindi; operator override `WADESK_OPT_OUT_KEYWORDS`) on incoming WhatsApp messages → append-only `wadesk_consent_events` + activity note for agents (SAFE-FR-10/11) |
@@ -86,9 +86,10 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `config/features.yml` | Append `whatsapp_web` flag (`feature_flags_ext_1`) |
 | `app/javascript/dashboard/featureFlags.js` | `WHATSAPP_WEB` constant |
 | `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Whatsapp.vue` | Offer "WhatsApp Web" provider when the flag is on |
-| `app/javascript/dashboard/composables/useInbox.js` | `isAWhatsAppWebChannel` helper |
+| `app/javascript/dashboard/composables/useInbox.js`, `app/javascript/shared/mixins/inboxMixin.js` | `isAWhatsAppWebChannel` helper |
+| `app/javascript/dashboard/components-next/Conversation/InboxName.vue`, `settings/inbox/Index.vue` | Official / Web badge next to WhatsApp inbox names (SAFE-FR-04) |
 | `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json` | New strings (other locales fall back to English) |
-| `settings/inbox/settingsPage/ConfigurationPage.vue` | Connection panel for `baileys` inboxes |
+| `settings/inbox/settingsPage/ConfigurationPage.vue` | WhatsApp Web inboxes show `WhatsappWebSettings` (connection, link method, log out) instead of the Cloud API key/webhook/template fields |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |

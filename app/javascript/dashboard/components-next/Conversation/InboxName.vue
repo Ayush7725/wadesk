@@ -1,5 +1,6 @@
 <script setup>
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
+import WhatsappConnectionBadge from './WhatsappConnectionBadge.vue';
 
 defineProps({
   inbox: {
@@ -15,5 +16,6 @@ defineProps({
     <span class="truncate text-body-main text-n-slate-11">
       {{ inbox.name }}
     </span>
+    <WhatsappConnectionBadge :inbox="inbox" class="ms-1" />
   </div>
 </template>
