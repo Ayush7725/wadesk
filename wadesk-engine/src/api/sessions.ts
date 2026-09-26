@@ -131,17 +131,27 @@ const toResponse = (snapshot: SessionSnapshot) => ({
 const sendError = (reply: FastifyReply, status: number, code: string, message: string) =>
   reply.code(status).send({ error: { code, message } });
 
-const tokenMatches = (header: string | undefined, token: Buffer): boolean => {
+export const tokenMatches = (header: string | undefined, token: Buffer): boolean => {
   const presented = Buffer.from(header?.startsWith('Bearer ') ? header.slice(7) : '');
   return presented.length === token.length && timingSafeEqual(presented, token);
 };
 
 // Internal session API used by Chatwoot (docs/wadesk/02-architecture.md §4.1).
+export type SendResult = 'sent' | 'rate_limited' | 'not_connected' | 'invalid' | 'error';
+
+const sendResult = (error: unknown): SendResult => {
+  if (error instanceof RateLimitedError) return 'rate_limited';
+  if (error instanceof SessionNotConnectedError) return 'not_connected';
+  if (error instanceof InvalidRecipientError || error instanceof InvalidSendRequestError) return 'invalid';
+  return 'error';
+};
+
 export function registerSessionRoutes(
   app: FastifyInstance,
   sessions: SessionService,
   apiToken: string,
   uploadDeadlineMs = UPLOAD_DEADLINE_MS,
+  onSend: (result: SendResult) => void = () => undefined,
 ): void {
   const token = Buffer.from(apiToken);
 
@@ -181,8 +191,14 @@ export function registerSessionRoutes(
     );
 
     scope.post<IdRequest>('/sessions/:id/messages', { schema: { params: idParams } }, async (request, reply) => {
-      const id = await sessions.send(request.params.id, await readOutgoingWithin(request, uploadDeadlineMs));
-      return reply.code(201).send({ id });
+      try {
+        const id = await sessions.send(request.params.id, await readOutgoingWithin(request, uploadDeadlineMs));
+        onSend('sent');
+        return await reply.code(201).send({ id });
+      } catch (error) {
+        onSend(sendResult(error));
+        throw error;
+      }
     });
 
     scope.get<MediaRequest>('/sessions/:id/media/:messageId', { schema: { params: mediaParams } }, async (request, reply) => {

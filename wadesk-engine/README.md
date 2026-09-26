@@ -38,7 +38,8 @@ All routes except `/health` need `Authorization: Bearer $WADESK_ENGINE_API_TOKEN
 | `POST /sessions/:id/messages` (multipart: `to`, `text?`, one `file?`, `reply_to_id?`, `reply_to_text?`, `reply_to_from_me?`) | `201 {id}` (WhatsApp message id). `409 not_connected`, `422 invalid_recipient`/`invalid_request`, `413 file_too_large` (>100 MB), `429 rate_limited` with `Retry-After` (20 sends/min per number, SAFE-FR-03) |
 | `GET /sessions/:id/media/:messageId` | Streams an incoming message's media with `Content-Type` and `Content-Disposition`; `404 media_not_found`, `502 media_unavailable` |
 | `DELETE /sessions/:id` | `204` — logs out and wipes credentials |
-| `GET /health` | `{status: "ok"}` or `503` when the database is down |
+| `GET /health` | `{status: "ok"}` or `503` when the database is down (no token: liveness probe) |
+| `GET /metrics` | Prometheus metrics (bearer token): `wadesk_engine_sessions{state}`, `wadesk_engine_events_total{event}`, `wadesk_engine_sends_total{result}`, `wadesk_engine_outbox_pending`, `wadesk_engine_outbox_oldest_seconds`, process metrics (`wadesk_engine_process_resident_memory_bytes`, …) |
 
 ## Events to Chatwoot (outbox)
 
@@ -49,6 +50,12 @@ Every event for Chatwoot is written to `wadesk_engine.outbox` first, then POSTed
 - **Retries:** exponential backoff (2 s, 4 s, … up to 10 min). Events still failing after 48 h are dropped and logged.
 - **Restarts / multiple instances:** undelivered events survive restarts; claims use a 60 s lease with
   `FOR UPDATE SKIP LOCKED`, so parallel dispatchers never send the same event concurrently.
+
+## Logging
+
+Logs never contain message content, credentials or tokens. Runs of 8–20 digits (phone numbers, WhatsApp and privacy
+IDs) keep only their last 4 digits; library console output is reduced to text (no objects, so no Signal keys); known
+benign library noise (e.g. WhatsApp's routine restart after linking, stream error 515) is dropped.
 
 ## Version notes
 
