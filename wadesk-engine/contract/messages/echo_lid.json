@@ -1,0 +1,20 @@
+{
+  "event": "messages",
+  "contacts": [
+    {
+      "user_id": "123456789012345@lid"
+    }
+  ],
+  "message_echoes": [
+    {
+      "id": "3EB0ECHO000001",
+      "from": "919828074219",
+      "to_user_id": "123456789012345@lid",
+      "timestamp": "1790000000",
+      "type": "text",
+      "text": {
+        "body": "Sent from my phone: yes, 45,000"
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import {
   DisconnectReason,
+  generateMessageIDV2,
   jidDecode,
   type ConnectionState,
   type MessageUpsertType,
@@ -10,7 +11,7 @@ import type { Readable } from 'node:stream';
 import type { Logger } from 'pino';
 import type { PostgresAuthState } from '../auth/postgres-auth-state.js';
 import type { MessageStore } from '../messages/store.js';
-import { normalizeIncoming, normalizeStatus } from '../whatsapp/normalizer.js';
+import { normalizeEcho, normalizeIncoming, normalizeStatus } from '../whatsapp/normalizer.js';
 import { messageContent, quotedMessage, recipientJid, type OutgoingMessage } from '../whatsapp/outgoing.js';
 import { MediaNotFoundError, MediaUnavailableError, RateLimitedError, SessionNotConnectedError } from './errors.js';
 import { RateLimiter } from './rate-limiter.js';
@@ -46,6 +47,8 @@ export interface SessionSnapshot {
 }
 
 const MEDIA_TYPES = new Set(['image', 'video', 'audio', 'document', 'sticker']);
+// How long WaDesk remembers ids it sent, to skip their echoes from WhatsApp.
+const SENT_ID_TTL_MS = 10 * 60_000;
 
 const statusCode = (error: unknown): number | undefined =>
   (error as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
@@ -62,6 +65,7 @@ export class Session {
   private credsSaving: Promise<void> = Promise.resolve();
   private updates: Promise<void> = Promise.resolve();
   private readonly limiter: RateLimiter;
+  private readonly sentIds = new Map<string, number>();
   private reconnectTimer: NodeJS.Timeout | undefined;
   private stopped = false;
   private mePhone: string | undefined;
@@ -166,14 +170,14 @@ export class Session {
     const wait = this.limiter.take();
     if (wait > 0) throw new RateLimitedError(wait);
 
-    const sent = await this.socket.sendMessage(
-      jid,
-      messageContent(outgoing),
-      outgoing.replyTo ? { quoted: quotedMessage(jid, outgoing.replyTo) } : {},
-    );
-    const id = sent?.key.id;
-    if (!id) throw new Error('WhatsApp did not return a message id');
-    return id;
+    // The id is chosen before sending, so the echo WhatsApp sends back for it is recognised and skipped.
+    const messageId = generateMessageIDV2(this.socket.user?.id);
+    this.rememberSent(messageId);
+    const sent = await this.socket.sendMessage(jid, messageContent(outgoing), {
+      messageId,
+      ...(outgoing.replyTo ? { quoted: quotedMessage(jid, outgoing.replyTo) } : {}),
+    });
+    return sent?.key.id ?? messageId;
   }
 
   // Streams a stored incoming message's media (served to Chatwoot for attachments).
@@ -197,11 +201,27 @@ export class Session {
     if (socket !== this.socket || type !== 'notify') return;
 
     for (const message of messages) {
-      const event = normalizeIncoming(message);
+      const event = message.key.fromMe ? this.echoFor(message) : normalizeIncoming(message);
       if (!event) continue;
-      if (MEDIA_TYPES.has(event.messages[0]?.type ?? '')) await this.deps.messages.save(this.id, message);
+      const type = ('messages' in event ? event.messages[0] : event.message_echoes[0])?.type ?? '';
+      if (MEDIA_TYPES.has(type)) await this.deps.messages.save(this.id, message);
       await this.deps.events.emit(this.id, event);
     }
+  }
+
+  // Messages the business sent from its phone become echoes (WW-FR-16); messages WaDesk sent are skipped.
+  private echoFor(message: WAMessage) {
+    if (!this.mePhone || this.sentIds.has(message.key.id ?? '')) return undefined;
+    return normalizeEcho(message, this.mePhone);
+  }
+
+  private rememberSent(id: string): void {
+    const now = Date.now();
+    for (const [sentId, at] of this.sentIds) {
+      if (now - at < SENT_ID_TTL_MS) break; // insertion order = time order
+      this.sentIds.delete(sentId);
+    }
+    this.sentIds.set(id, now);
   }
 
   // Delivery receipts for messages the business sent: sent → delivered → read, or failed (WW-FR-23).

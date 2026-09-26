@@ -131,6 +131,28 @@ RSpec.describe 'WhatsApp Web incoming messages', type: :request do
     expect(inbox.messages.where(source_id: '3EB0A1B2C3D4E5F6').count).to eq(1)
   end
 
+  describe 'messages sent from the business phone (WW-FR-16)' do
+    it 'shows them as outgoing messages without sending them again' do
+      deliver(contract('text'))
+
+      deliver(contract('echo_text'))
+
+      echo = inbox.messages.find_by(source_id: '3EB0ECHO000001')
+      expect(echo).to have_attributes(message_type: 'outgoing', status: 'delivered', content: 'Sent from my phone: yes, 45,000')
+      expect(echo.content_attributes).to include('external_echo' => true)
+      expect(echo.conversation).to eq(inbox.messages.find_by(source_id: '3EB0A1B2C3D4E5F6').conversation)
+      expect(WebMock).not_to have_requested(:post, %r{engine:4000/sessions/\d+/messages})
+    end
+
+    it 'finds privacy-ID customers' do
+      deliver(contract('lid_only'))
+
+      deliver(contract('echo_lid'))
+
+      expect(inbox.messages.find_by(source_id: '3EB0ECHO000001').conversation.contact_inbox.source_id).to eq('123456789012345@lid')
+    end
+  end
+
   it 'continues the open conversation for the next message' do
     deliver(contract('text'))
     deliver(contract('text').sub('3EB0A1B2C3D4E5F6', '3EB0A1B2C3D4E5F7'))

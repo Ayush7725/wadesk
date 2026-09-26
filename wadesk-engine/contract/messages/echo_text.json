@@ -1,0 +1,20 @@
+{
+  "event": "messages",
+  "contacts": [
+    {
+      "wa_id": "919876543210"
+    }
+  ],
+  "message_echoes": [
+    {
+      "id": "3EB0ECHO000001",
+      "from": "919828074219",
+      "to": "919876543210",
+      "timestamp": "1790000000",
+      "type": "text",
+      "text": {
+        "body": "Sent from my phone: yes, 45,000"
+      }
+    }
+  ]
+}

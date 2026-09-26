@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { proto, WAMessage } from 'baileys';
 import { describe, expect, it } from 'vitest';
-import { normalizeIncoming } from '../../src/whatsapp/normalizer.js';
+import { normalizeEcho, normalizeIncoming } from '../../src/whatsapp/normalizer.js';
 
 const CUSTOMER = '919876543210@s.whatsapp.net';
 const LID = '123456789012345@lid';
@@ -83,5 +83,27 @@ describe('normalizeIncoming', () => {
     ['empty messages', {}],
   ])('ignores %s', (_name, message) => {
     expect(normalizeIncoming(incoming(message))).toBeUndefined();
+  });
+});
+
+describe('normalizeEcho', () => {
+  const own = (key: Partial<WAMessage['key']> = {}): WAMessage => ({
+    key: { remoteJid: CUSTOMER, fromMe: true, id: '3EB0ECHO000001', ...key },
+    message: { conversation: 'Sent from my phone: yes, 45,000' },
+    messageTimestamp: 1790000000,
+    pushName: 'The business itself',
+  });
+
+  it('turns a message typed on the business phone into an echo', () => {
+    expect(normalizeEcho(own(), '919828074219')).toEqual(contract('echo_text'));
+  });
+
+  it('addresses privacy-ID customers by user id', () => {
+    expect(normalizeEcho(own({ remoteJid: LID }), '919828074219')).toEqual(contract('echo_lid'));
+  });
+
+  it('ignores customer messages and groups', () => {
+    expect(normalizeEcho(own({ fromMe: false }), '919828074219')).toBeUndefined();
+    expect(normalizeEcho(own({ remoteJid: '120363@g.us' }), '919828074219')).toBeUndefined();
   });
 });

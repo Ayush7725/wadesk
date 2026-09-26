@@ -96,6 +96,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `app/dispatchers/async_dispatcher.rb` | Registers `Wadesk::OptOutListener` |
 | `db/migrate/*_create_wadesk_consent_events.rb`, `db/schema.rb` | `wadesk_consent_events` table |
 | `config/locales/en.yml` | `wadesk.consent.*` strings |
+| `app/jobs/webhooks/whatsapp_events_job.rb` | Recognises flat `message_echoes` (WhatsApp Web) and routes `baileys` echoes to the standard incoming service with `outgoing_echo: true` (WW-FR-16) |
 | `lib/regex_helper.rb` | `WHATSAPP_CHANNEL_REGEX` also accepts WhatsApp Web privacy IDs (`<digits>@lid`) as contact source ids |
 | `.github/` | Chatwoot-org-only workflows removed; `run_foss_spec.yml` manual-only; `wadesk_ci.yml` added; own PR template and CODEOWNERS |
 
