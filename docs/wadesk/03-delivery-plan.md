@@ -39,6 +39,8 @@ Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 engine restart restores the session without a new QR; unlinking from the phone produces a `logged_out` webhook.
 
 ### M2 — Incoming messages into Chatwoot
+
+**Status:** built (PRs #12–#16); acceptance pending (real second WhatsApp number needed), together with M1's deferred wrong-number check.
 Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 
 | Task | Output |
@@ -54,6 +56,8 @@ Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 under the right contact, in a WhatsApp inbox; group messages do not appear; all existing WhatsApp specs pass.
 
 ### M3 — Outgoing messages and status
+
+**Status:** built (PRs #17–#23, incl. safety items M3.5–M3.7 and a security fix keeping Signal keys out of logs); acceptance pending.
 Covers WW-FR-20, 21, 22, 23, 24, 25
 
 | Task | Output |
@@ -70,6 +74,8 @@ Covers WW-FR-20, 21, 22, 23, 24, 25
 sent → delivered → read; sending while disconnected shows a clear failure; replying after 24h works.
 
 ### M4 — Admin UI
+
+**Status:** built (PRs #24, #25); not yet seen in a browser — the laptop cannot compile the frontend, so the UI is tested with the GitHub-built bundle (`bin/wadesk-dev ui-bundle` + `server-prebuilt`, PR #26).
 Covers WW-FR-01, 02, 03, 05, 06, 08 (UI), 30 (UI), WW-NFR-10
 
 | Task | Output |
@@ -89,9 +95,9 @@ Covers WW-NFR-02, 03, 04, 06, 09, WW-FR-16, 31 and Step 1 release criteria
 | Task | Output |
 |---|---|
 | M5.1 Metrics (`/metrics`), structured logs with redaction audit | Dashboard-ready metrics |
-| M5.2 Load test: N simulated sessions → measured memory/CPU per session; set per-instance cap | Report in `docs/wadesk/` |
+| M5.2 Load test: measured memory/CPU per session; set per-instance cap. Done with real linked numbers on the staging server (simulating many WhatsApp connections from one IP risks it being flagged as abuse) | Report in `docs/wadesk/` |
 | M5.3 Fault injection: kill engine / Chatwoot / DB mid-traffic; verify no loss, no duplicates | Test report |
-| M5.4 Own-phone echo messages (WW-FR-16) and Super Admin session list (WW-FR-31) if not already done | Specs |
+| M5.4 Own-phone echo messages (WW-FR-16) — done (#28). Super Admin session list (WW-FR-31) moved to the Step 2 operator screen (see Open items) | Specs |
 | M5.5 72-hour soak test with 2 real numbers | Test report |
 | M5.6 Retire Evolution API from the demo stack; tag `v0.1.0`; release notes | Release |
 
@@ -121,7 +127,7 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 
 | Item | Found | Needed by |
 |---|---|---|
-| **Operator screen for per-account settings.** Chatwoot's Super Admin can only toggle account features and limits in the enterprise edition, which WaDesk does not use (ADR-0001). A build without `enterprise/` therefore has no UI to enable `whatsapp_web` or set the new-chat cap for a client; today this is done in the Rails console. Decide the production packaging and build a small operator screen. | M3.5 | Step 2 (before the first paying client) |
+| **Operator screen for per-account settings** (also lists all WhatsApp Web sessions and their states — WW-FR-31). Chatwoot's Super Admin can only toggle account features and limits in the enterprise edition, which WaDesk does not use (ADR-0001). A build without `enterprise/` therefore has no UI to enable `whatsapp_web` or set the new-chat cap for a client; today this is done in the Rails console. Decide the production packaging and build a small operator screen. | M3.5 | Step 2 (before the first paying client) |
 
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
