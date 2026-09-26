@@ -83,7 +83,8 @@ dev server). On Fedora it uses the rootless Podman socket automatically.
 | `bin/wadesk-dev rubocop app/models/channel/whatsapp.rb` | Lint Ruby |
 | `bin/wadesk-dev pnpm test` / `bin/wadesk-dev pnpm eslint` | Frontend tests / lint |
 | `bin/wadesk-dev sh` | Shell inside the toolbox |
-| `bin/wadesk-dev server` | Chatwoot dev server on http://localhost:3300 (Vite on 3036) |
+| `bin/wadesk-dev server` | Chatwoot dev server on http://localhost:3300 (Vite on 3036) — needs a lot of memory |
+| `bin/wadesk-dev ui-bundle` then `bin/wadesk-dev server-prebuilt` | Low-memory alternative: run the GitHub workflow **WaDesk UI bundle** (Actions → Run workflow) on your branch, download its frontend bundle, and run Chatwoot + engine without compiling the frontend |
 | `bin/wadesk-dev down` | Stop everything (data volumes are kept) |
 
 Engine commands are in [wadesk-engine/README.md](../../wadesk-engine/README.md).

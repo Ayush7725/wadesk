@@ -47,9 +47,20 @@ services:
     ports: ['127.0.0.1:3300:3000']
     depends_on: [db, redis, vite]
 
+  # Same as web, but serves the prebuilt frontend bundle (bin/wadesk-dev ui-bundle) instead of the Vite dev
+  # server, and never compiles the frontend itself: for machines with too little memory to build it.
+  web-prebuilt:
+    <<: *toolbox
+    profiles: [prebuilt]
+    environment:
+      <<: *env
+      VITE_RUBY_AUTO_BUILD: 'false'
+    command: sh -c 'rm -f tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0 -p 3000'
+    ports: ['127.0.0.1:3300:3000']
+
   worker:
     <<: *toolbox
-    profiles: [app]
+    profiles: [app, prebuilt]
     command: bundle exec sidekiq -C config/sidekiq.yml
 
   vite:
@@ -67,7 +78,7 @@ services:
   # Internal WhatsApp Web engine, with reload on change. Published on 127.0.0.1:4400 for local curl testing only.
   engine:
     <<: *toolbox
-    profiles: [app]
+    profiles: [app, prebuilt]
     working_dir: /app/wadesk-engine
     environment:
       <<: *env
