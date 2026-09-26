@@ -25,7 +25,7 @@ class Conversations::MessageWindowService
     when 'Channel::Tiktok'
       tiktok_messaging_window
     when 'Channel::Whatsapp'
-      MESSAGING_WINDOW_24_HOURS
+      whatsapp_messaging_window
     when 'Channel::TwilioSms'
       twilio_messaging_window
     end
@@ -41,6 +41,11 @@ class Conversations::MessageWindowService
     return if @conversation.inbox.channel.additional_attributes['agent_reply_time_window'].blank?
 
     @conversation.inbox.channel.additional_attributes['agent_reply_time_window'].to_i.hours
+  end
+
+  # WaDesk: the 24-hour window is a Meta Business Platform rule; WhatsApp Web inboxes have none (WW-FR-24).
+  def whatsapp_messaging_window
+    @conversation.inbox.channel.whatsapp_web? ? nil : MESSAGING_WINDOW_24_HOURS
   end
 
   # Check medium of the inbox to determine the messaging window

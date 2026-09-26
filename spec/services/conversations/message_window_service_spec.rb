@@ -356,6 +356,22 @@ RSpec.describe Conversations::MessageWindowService do
     end
   end
 
+  describe 'on WhatsApp Web channels' do
+    let(:account) { create(:account).tap { |a| a.enable_features!('whatsapp_web') } }
+    let(:channel) { create(:channel_whatsapp, account: account, provider: 'baileys', provider_config: {}, sync_templates: false) }
+    let(:conversation) { create(:conversation, inbox: channel.inbox, account: account) }
+
+    it 'allows replies without any incoming message' do
+      expect(described_class.new(conversation).can_reply?).to be true
+    end
+
+    it 'allows replies long after the last incoming message' do
+      create(:message, account: account, inbox: channel.inbox, conversation: conversation, message_type: :incoming, created_at: 30.days.ago)
+
+      expect(described_class.new(conversation).can_reply?).to be true
+    end
+  end
+
   describe 'on WhatsApp Cloud channels' do
     let!(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
     let!(:whatsapp_inbox) { create(:inbox, channel: whatsapp_channel, account: whatsapp_channel.account) }
