@@ -12,6 +12,7 @@ import {
   useStore,
 } from 'dashboard/composables/store';
 import ChannelName from './components/ChannelName.vue';
+import WhatsappConnectionBadge from 'dashboard/components-next/Conversation/WhatsappConnectionBadge.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { getInboxIdentifier, searchInboxes } from 'dashboard/helper/inbox';
@@ -165,6 +166,7 @@ const openDelete = inbox => {
                   :voice-enabled="inbox.voice_enabled"
                   class="shrink-0"
                 />
+                <WhatsappConnectionBadge :inbox="inbox" />
                 <template v-if="inbox.channel_identifier">
                   <span aria-hidden="true">{{ IDENTIFIER_SEPARATOR }}</span>
                   <bdi

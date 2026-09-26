@@ -85,6 +85,13 @@ export default {
         this.whatsAppAPIProvider === 'whatsapp_cloud'
       );
     },
+    // WaDesk: WhatsApp Web (linked device) inbox.
+    isAWhatsAppWebChannel() {
+      return (
+        this.channelType === INBOX_TYPES.WHATSAPP &&
+        this.whatsAppAPIProvider === 'baileys'
+      );
+    },
     is360DialogWhatsAppChannel() {
       return (
         this.channelType === INBOX_TYPES.WHATSAPP &&

@@ -116,6 +116,14 @@ export const useInbox = (inboxId = null) => {
     );
   });
 
+  // WaDesk: WhatsApp Web (linked device) inbox.
+  const isAWhatsAppWebChannel = computed(() => {
+    return (
+      channelType.value === INBOX_TYPES.WHATSAPP &&
+      whatsAppAPIProvider.value === 'baileys'
+    );
+  });
+
   const is360DialogWhatsAppChannel = computed(() => {
     return (
       channelType.value === INBOX_TYPES.WHATSAPP &&
@@ -158,6 +166,7 @@ export const useInbox = (inboxId = null) => {
     isATwilioWhatsAppChannel,
     isAWhatsAppCloudChannel,
     is360DialogWhatsAppChannel,
+    isAWhatsAppWebChannel,
     isAnEmailChannel,
     isAnInstagramChannel,
     isATiktokChannel,

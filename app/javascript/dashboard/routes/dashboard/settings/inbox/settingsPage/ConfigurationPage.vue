@@ -15,6 +15,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
 import WhatsappBusinessManagementToken from './WhatsappBusinessManagementToken.vue';
+import WhatsappWebSettings from './WhatsappWebSettings.vue';
 import HmacSecretKey from './components/HmacSecretKey.vue';
 
 export default {
@@ -27,6 +28,7 @@ export default {
     NextButton,
     TextArea,
     WhatsappBusinessManagementToken,
+    WhatsappWebSettings,
     HmacSecretKey,
   },
   mixins: [inboxMixin],
@@ -383,6 +385,8 @@ export default {
     <ImapSettings :inbox="inbox" />
     <SmtpSettings :inbox="inbox" />
   </div>
+  <!-- WaDesk: WhatsApp Web inboxes have no API keys, webhooks or templates -->
+  <WhatsappWebSettings v-else-if="isAWhatsAppWebChannel" :inbox="inbox" />
   <div v-else-if="isAWhatsAppChannel && !isATwilioChannel">
     <div v-if="inbox.provider_config">
       <!-- Embedded Signup Section -->

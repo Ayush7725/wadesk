@@ -1690,6 +1690,25 @@
         "LOGOUT": "Log out",
         "LOGOUT_CONFIRM": "Log this number out of WhatsApp? Conversations stay in the inbox; you can link the phone again later.",
         "CONTINUE": "Continue"
+      },
+      "BADGE": {
+        "OFFICIAL": "Official",
+        "OFFICIAL_TOOLTIP": "Official WhatsApp Business Platform (Meta)",
+        "WEB": "Web",
+        "WEB_TOOLTIP": "WhatsApp Web linked device — unofficial connection, conversations only"
+      },
+      "SETTINGS": {
+        "CONNECTION_TITLE": "WhatsApp Web connection",
+        "CONNECTION_DESC": "The phone linked to this inbox. If WaDesk is removed from the phone's Linked devices, link it again here.",
+        "LINK_METHOD_TITLE": "Linking method",
+        "LINK_METHOD_DESC": "Used the next time the phone is linked.",
+        "USE_QR": "Link with a QR code",
+        "USE_CODE": "Link with a pairing code",
+        "LOGOUT_TITLE": "Log out",
+        "LOGOUT_DESC": "Unlinks WaDesk from the phone and forgets the connection. Conversations stay in this inbox.",
+        "LOGOUT_CONFIRM_BUTTON": "Yes, log out",
+        "CANCEL": "Cancel",
+        "ERROR": "Something went wrong. Please try again."
       }
     }
   }
