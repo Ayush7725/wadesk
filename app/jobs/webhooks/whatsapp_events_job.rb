@@ -77,12 +77,14 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   # - "from" is the business number; "to" is the contact phone and can be omitted
   # - "to_user_id" is the contact BSUID; "to_parent_user_id" is included when parent BSUIDs are enabled
   # - contacts[] contains the same contact identifiers
+  # WaDesk: WhatsApp Web echoes arrive in the flat shape (top-level message_echoes).
   def message_echo_event?(params)
-    params.dig(:entry, 0, :changes, 0, :field) == 'smb_message_echoes'
+    params.dig(:entry, 0, :changes, 0, :field) == 'smb_message_echoes' || params[:message_echoes].present?
   end
 
   def handle_message_echo(channel, params)
-    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
+    service = channel.provider == 'baileys' ? Whatsapp::IncomingMessageService : Whatsapp::IncomingMessageWhatsappCloudService
+    service.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
   end
 
   def handle_message_events(channel, params, locked_sender_id = nil)

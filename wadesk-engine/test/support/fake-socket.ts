@@ -53,7 +53,7 @@ export class FakeSocket implements WaSocket {
 
   sendMessage(jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions): Promise<WAMessage> {
     this.sent.push({ jid, content, options });
-    return Promise.resolve({ key: { remoteJid: jid, fromMe: true, id: `SENT${String(this.sent.length)}` } });
+    return Promise.resolve({ key: { remoteJid: jid, fromMe: true, id: options?.messageId ?? `SENT${String(this.sent.length)}` } });
   }
 
   receive(messages: WAMessage[], type: MessageUpsertType = 'notify'): void {

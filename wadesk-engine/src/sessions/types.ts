@@ -1,5 +1,5 @@
 // How the admin links the number: scan a QR code, or type a pairing code on the phone (for phone-only owners).
-import type { MessagesEvent, StatusesEvent } from '../whatsapp/normalizer.js';
+import type { EchoesEvent, MessagesEvent, StatusesEvent } from '../whatsapp/normalizer.js';
 
 export type LinkMethod = 'qr' | 'code';
 
@@ -25,7 +25,7 @@ export interface ConnectionEvent {
 }
 
 // Everything the engine sends to Chatwoot.
-export type EngineEvent = ConnectionEvent | MessagesEvent | StatusesEvent;
+export type EngineEvent = ConnectionEvent | MessagesEvent | EchoesEvent | StatusesEvent;
 
 export interface EventSink {
   emit(sessionId: string, event: EngineEvent): Promise<void>;

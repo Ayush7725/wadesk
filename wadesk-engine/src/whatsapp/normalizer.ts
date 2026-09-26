@@ -34,6 +34,23 @@ export interface MessagesEvent {
   messages: IncomingMessage[];
 }
 
+export interface EchoMessage {
+  id: string;
+  from: string; // the business's own number
+  to?: string;
+  to_user_id?: string;
+  timestamp: string;
+  type: string;
+  context?: { id: string };
+  [body: string]: unknown;
+}
+
+export interface EchoesEvent {
+  event: 'messages';
+  contacts: IncomingContact[];
+  message_echoes: EchoMessage[];
+}
+
 export type DeliveryStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface StatusesEvent {
@@ -133,12 +150,20 @@ function replyTo(content: proto.IMessage, type: keyof proto.IMessage): string | 
   return typeof part === 'object' ? (part?.contextInfo?.stanzaId ?? undefined) : undefined;
 }
 
-// Converts an incoming WhatsApp Web message into a Chatwoot "messages" event, or undefined when the
-// message does not belong in the inbox (own messages, groups, status, broadcasts, protocol messages).
-export function normalizeIncoming(message: WAMessage): MessagesEvent | undefined {
+interface Parsed {
+  id: string;
+  phone: string | undefined;
+  lid: string | undefined;
+  timestamp: string;
+  body: Body;
+  context: { id: string } | undefined;
+}
+
+// Shared by customer messages and echoes: 1:1 chats only, wrappers unwrapped, edits and protocol messages skipped.
+function parse(message: WAMessage): Parsed | undefined {
   const { key } = message;
   const jid = key.remoteJid;
-  if (!jid || !key.id || key.fromMe || !isCustomerChat(jid)) return undefined;
+  if (!jid || !key.id || !isCustomerChat(jid)) return undefined;
 
   // Checked before unwrapping: normalizeMessageContent would turn an edit into a look-alike new message.
   if (message.message?.editedMessage) return undefined;
@@ -147,28 +172,58 @@ export function normalizeIncoming(message: WAMessage): MessagesEvent | undefined
   const type = getContentType(content);
   if (!content || !type || IGNORED_TYPES.has(type)) return undefined;
 
-  const phone = phoneOf(jid) ?? phoneOf(key.remoteJidAlt);
-  const lid = lidOf(jid) ?? lidOf(key.remoteJidAlt);
-  const from = phone ?? lid;
-  if (!from) return undefined;
+  const context = replyTo(content, type);
+  return {
+    id: key.id,
+    phone: phoneOf(jid) ?? phoneOf(key.remoteJidAlt),
+    lid: lidOf(jid) ?? lidOf(key.remoteJidAlt),
+    timestamp: seconds(message.messageTimestamp),
+    body: body(key.id, content, type),
+    context: context ? { id: context } : undefined,
+  };
+}
+
+// Converts an incoming WhatsApp Web message into a Chatwoot "messages" event, or undefined when the
+// message does not belong in the inbox (own messages, groups, status, broadcasts, protocol messages).
+export function normalizeIncoming(message: WAMessage): MessagesEvent | undefined {
+  if (message.key.fromMe) return undefined;
+  const parsed = parse(message);
+  const from = parsed?.phone ?? parsed?.lid;
+  if (!parsed || !from) return undefined;
 
   const contact: IncomingContact = {
-    ...(phone ? { wa_id: phone } : {}),
-    ...(lid ? { user_id: lid } : {}),
+    ...(parsed.phone ? { wa_id: parsed.phone } : {}),
+    ...(parsed.lid ? { user_id: parsed.lid } : {}),
     ...(message.pushName ? { profile: { name: message.pushName } } : {}),
   };
-  const context = replyTo(content, type);
-
   return {
     event: 'messages',
     contacts: [contact],
     messages: [
+      { id: parsed.id, from, timestamp: parsed.timestamp, ...parsed.body, ...(parsed.context ? { context: parsed.context } : {}) },
+    ],
+  };
+}
+
+// A message the business sent from its own phone (not through WaDesk), in the Cloud API "message_echoes"
+// shape: Chatwoot shows it as an outgoing message without sending it again (WW-FR-16).
+export function normalizeEcho(message: WAMessage, businessPhone: string): EchoesEvent | undefined {
+  if (!message.key.fromMe) return undefined;
+  const parsed = parse(message);
+  if (!parsed || (!parsed.phone && !parsed.lid)) return undefined;
+
+  return {
+    event: 'messages',
+    contacts: [{ ...(parsed.phone ? { wa_id: parsed.phone } : {}), ...(parsed.lid ? { user_id: parsed.lid } : {}) }],
+    message_echoes: [
       {
-        id: key.id,
-        from,
-        timestamp: seconds(message.messageTimestamp),
-        ...body(key.id, content, type),
-        ...(context ? { context: { id: context } } : {}),
+        id: parsed.id,
+        from: businessPhone,
+        ...(parsed.phone ? { to: parsed.phone } : {}),
+        ...(parsed.lid ? { to_user_id: parsed.lid } : {}),
+        timestamp: parsed.timestamp,
+        ...parsed.body,
+        ...(parsed.context ? { context: parsed.context } : {}),
       },
     ],
   };

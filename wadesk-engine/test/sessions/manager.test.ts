@@ -330,7 +330,10 @@ describe('SessionManager', () => {
       socketAt(sockets, 0).receive([customerMessage('M1', { conversation: 'first' }), customerMessage('M2', { conversation: 'second' })]);
 
       await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(2));
-      expect(messageEventsOf('t-1').map(({ event }) => (event.event === 'messages' ? event.messages[0]?.id : undefined))).toEqual(['M1', 'M2']);
+      expect(messageEventsOf('t-1').map(({ event }) => (event.event === 'messages' && 'messages' in event ? event.messages[0]?.id : undefined))).toEqual([
+        'M1',
+        'M2',
+      ]);
       expect(events.findIndex(({ event }) => event.event === 'messages')).toBeGreaterThan(
         events.findIndex(({ event }) => event.event === 'connection' && event.state === 'connected'),
       );
@@ -344,6 +347,24 @@ describe('SessionManager', () => {
       socketAt(sockets, 0).receive([customerMessage('M1', { conversation: 'real' })]);
 
       await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(1));
+    });
+
+    it('shows messages typed on the business phone as echoes, but not echoes of WaDesk\'s own sends', async () => {
+      const { manager, sockets } = await connected();
+      const sentId = await manager.send('t-1', { to: '919876543210', text: 'from WaDesk' });
+
+      socketAt(sockets, 0).receive([
+        { ...customerMessage(sentId, { conversation: 'from WaDesk' }), key: { remoteJid: '919876543210@s.whatsapp.net', fromMe: true, id: sentId } },
+        { ...customerMessage('PHONE1', { conversation: 'typed on the phone' }), key: { remoteJid: '919876543210@s.whatsapp.net', fromMe: true, id: 'PHONE1' } },
+      ]);
+
+      await eventually(() => expect(messageEventsOf('t-1')).toHaveLength(1));
+      const event = messageEventsOf('t-1')[0]?.event;
+      expect(event && 'message_echoes' in event ? event.message_echoes[0] : undefined).toMatchObject({
+        id: 'PHONE1',
+        from: PHONE,
+        to: '919876543210',
+      });
     });
 
     it('stores media details encrypted for later download, but not text messages', async () => {
@@ -406,8 +427,13 @@ describe('SessionManager', () => {
     it('sends a text and returns WhatsApp\'s message id', async () => {
       const { manager, sockets } = await linked();
 
-      expect(await manager.send('t-1', { to: '919876543210', text: 'Price is ₹45,000' })).toBe('SENT1');
-      expect(socketAt(sockets, 0).sent).toEqual([{ jid: '919876543210@s.whatsapp.net', content: { text: 'Price is ₹45,000' }, options: {} }]);
+      const id = await manager.send('t-1', { to: '919876543210', text: 'Price is ₹45,000' });
+
+      // WaDesk chooses the id before sending, so the echo of this message can be recognised.
+      expect(socketAt(sockets, 0).sent).toEqual([
+        { jid: '919876543210@s.whatsapp.net', content: { text: 'Price is ₹45,000' }, options: { messageId: id } },
+      ]);
+      expect(id).toMatch(/^[0-9A-F]{16,}$/);
     });
 
     it('quotes the message being answered', async () => {
@@ -415,7 +441,7 @@ describe('SessionManager', () => {
 
       await manager.send('t-1', { to: '123456789012345@lid', text: 'Yes', replyTo: { id: 'IN1', text: 'Brown?', fromMe: false } });
 
-      expect(socketAt(sockets, 0).sent[0]?.options).toEqual({
+      expect(socketAt(sockets, 0).sent[0]?.options).toMatchObject({
         quoted: { key: { remoteJid: '123456789012345@lid', id: 'IN1', fromMe: false }, message: { conversation: 'Brown?' } },
       });
     });
