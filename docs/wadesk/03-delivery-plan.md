@@ -117,6 +117,12 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 | CI (GitHub Actions) | Every PR: lint + unit + contract + integration tests |
 | Staging (VPS, later) | Soak tests and customer demos before Step 2 go-live |
 
+## Open items
+
+| Item | Found | Needed by |
+|---|---|---|
+| **Operator screen for per-account settings.** Chatwoot's Super Admin can only toggle account features and limits in the enterprise edition, which WaDesk does not use (ADR-0001). A build without `enterprise/` therefore has no UI to enable `whatsapp_web` or set the new-chat cap for a client; today this is done in the Rails console. Decide the production packaging and build a small operator screen. | M3.5 | Step 2 (before the first paying client) |
+
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
 opt-in capture, campaign audience filtering and review, campaign permission, audit log — [04-safety-requirements.md](04-safety-requirements.md)).

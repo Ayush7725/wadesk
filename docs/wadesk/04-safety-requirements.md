@@ -32,7 +32,7 @@ Phase: **S1** = Step 1 (current), **S2** = Step 2 (billing + campaigns), **S3** 
 | ID | Requirement | Phase | Pri |
 |---|---|---|---|
 | SAFE-FR-01 | Web (`baileys`) inboxes cannot be used for campaigns, broadcasts or bulk sends. The campaign UI does not offer them and the API rejects them. | S1 | M |
-| SAFE-FR-02 | Business-initiated chats on a Web inbox are capped per number per day (default **20**, operator-configurable per account). Beyond the cap the send fails with a clear reason; replies in existing conversations are never capped. | S1 | M |
+| SAFE-FR-02 | Business-initiated chats on a Web inbox are capped per number per rolling 24 hours (default **20**, operator-configurable per account via `custom_attributes['wadesk_whatsapp_web_daily_new_chats']`). Beyond the cap the send fails with a clear reason; replies to customers who wrote in are never capped. | S1 | M |
 | SAFE-FR-03 | Outgoing messages per Web number are rate-limited (default **20/minute**); excess messages are queued, not dropped. | S1 | M |
 | SAFE-FR-04 | The inbox list, inbox settings and conversation header show the connection type (Official / Web). Web shows a short "unofficial connection" notice with a link to details. | S1 | M |
 | SAFE-FR-05 | WaDesk does not implement features intended to evade WhatsApp's detection (see ADR-0006 decision 3). | S1 | M |
