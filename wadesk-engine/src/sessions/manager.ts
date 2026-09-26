@@ -1,7 +1,7 @@
 import type { OutgoingMessage } from '../whatsapp/outgoing.js';
 import { SessionNotFoundError } from './errors.js';
 import { Session, type SessionDeps, type SessionSnapshot } from './session.js';
-import type { LinkMethod, SessionRecord } from './types.js';
+import type { LinkMethod, SessionRecord, SessionState } from './types.js';
 
 const LIVE_STATES = new Set(['connecting', 'qr_pending', 'connected']);
 
@@ -79,6 +79,13 @@ export class SessionManager {
       throw new SessionNotFoundError(id);
     }
     await this.deps.repository.delete(id);
+  }
+
+  // Number of sessions per state, for metrics.
+  states(): Partial<Record<SessionState, number>> {
+    const counts: Partial<Record<SessionState, number>> = {};
+    for (const session of this.sessions.values()) counts[session.currentState] = (counts[session.currentState] ?? 0) + 1;
+    return counts;
   }
 
   shutdown(): void {

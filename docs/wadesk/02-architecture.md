@@ -53,7 +53,7 @@ Internal modules:
 - `Outbox` + `Dispatcher` — every event bound for Chatwoot is first written to an outbox table, then delivered
   with retries; rows are deleted on 2xx. Guarantees at-least-once delivery across restarts (WW-FR-17, WW-NFR-02).
 - `MessageStore` — keeps the raw message metadata needed for media download and quoted replies (30-day retention).
-- `Metrics/Health` — `/health` (liveness + DB), `/metrics` (Prometheus text).
+- `Metrics/Health` — `/health` (liveness + DB, no auth), `/metrics` (Prometheus text, bearer token): sessions by state, events and sends by outcome, outbox backlog and age, process memory.
 
 ### 2.2 Chatwoot changes
 
