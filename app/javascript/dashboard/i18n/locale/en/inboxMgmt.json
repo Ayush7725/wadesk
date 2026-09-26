@@ -253,7 +253,9 @@
           "WHATSAPP_CLOUD_DESC": "Quick setup through Meta",
           "WHATSAPP_CLOUD_MANUAL_SETUP_DESC": "Manual setup with Cloud API credentials",
           "TWILIO_DESC": "Connect via Twilio credentials",
-          "360_DIALOG": "360Dialog"
+          "360_DIALOG": "360Dialog",
+          "WHATSAPP_WEB": "WhatsApp Web",
+          "WHATSAPP_WEB_DESC": "Link a phone by QR code or pairing code"
         },
         "SELECT_PROVIDER": {
           "TITLE": "Select your API provider",
@@ -1634,6 +1636,61 @@
       "INSTAGRAM": "Instagram",
       "TIKTOK": "TikTok",
       "VOICE": "Voice"
+    },
+    "WHATSAPP_WEB": {
+      "FORM": {
+        "TITLE": "Connect a number with WhatsApp Web",
+        "DESCRIPTION": "Your phone stays the main WhatsApp device; WaDesk joins it as a linked device, like WhatsApp Web.",
+        "INBOX_NAME": {
+          "LABEL": "Inbox name",
+          "PLACEHOLDER": "e.g. Sales WhatsApp",
+          "ERROR": "Please enter an inbox name"
+        },
+        "PHONE_NUMBER": {
+          "LABEL": "WhatsApp number",
+          "PLACEHOLDER": "+919876543210",
+          "ERROR": "Enter the number with country code, e.g. +919876543210"
+        },
+        "LINK_METHOD": {
+          "LABEL": "How will you link the phone?",
+          "QR": "Scan a QR code",
+          "QR_DESC": "Best when this screen and the phone are different devices. The phone shows it as \"WaDesk\" under Linked devices.",
+          "CODE": "Enter a pairing code",
+          "CODE_DESC": "Best when the phone is your only device. WhatsApp only allows a standard name for this method, so the phone shows it as \"Chrome (Ubuntu)\" under Linked devices."
+        },
+        "WARNING": "WhatsApp Web is not the official WhatsApp Business Platform. WhatsApp may restrict or ban numbers used for bulk, automated or unwanted messages. Use it for conversations with customers who contact you; use an Official WhatsApp inbox for campaigns.",
+        "ACKNOWLEDGE": "I understand the risk and will not use this number for bulk or unsolicited messaging",
+        "ACKNOWLEDGE_ERROR": "Please confirm you understand the risk before connecting",
+        "SUBMIT": "Create inbox and link phone",
+        "ERROR": "Could not create the WhatsApp Web inbox"
+      },
+      "CONNECT": {
+        "TITLE": "Link your phone",
+        "STATE": {
+          "connecting": "Connecting to WhatsApp…",
+          "qr_pending": "Waiting for your phone",
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "logged_out": "Logged out",
+          "failed": "Could not link",
+          "not_linked": "Not linked"
+        },
+        "QR_STEPS": "On the phone: WhatsApp → Settings → Linked devices → Link a device, then scan this code. It refreshes automatically.",
+        "CODE_STEPS": "On the phone: WhatsApp → Settings → Linked devices → Link a device → \"Link with phone number instead\", then enter this code. A new code appears automatically if it expires.",
+        "CONNECTED": "{phone} is linked. Customers' messages will now arrive in this inbox.",
+        "ERRORS": {
+          "number_mismatch": "The phone that was linked has a different number than this inbox. It was unlinked; link the phone for this inbox's number.",
+          "forbidden": "WhatsApp refused the connection for this number.",
+          "unlinked_from_phone": "WaDesk was removed from the phone's Linked devices.",
+          "qr_expired": "Nobody linked the phone in time.",
+          "logged_out_by_admin": "An administrator logged this number out.",
+          "unavailable": "The WhatsApp service is not reachable right now. Try again in a moment."
+        },
+        "RECONNECT": "Link again",
+        "LOGOUT": "Log out",
+        "LOGOUT_CONFIRM": "Log this number out of WhatsApp? Conversations stay in the inbox; you can link the phone again later.",
+        "CONTINUE": "Continue"
+      }
     }
   }
 }

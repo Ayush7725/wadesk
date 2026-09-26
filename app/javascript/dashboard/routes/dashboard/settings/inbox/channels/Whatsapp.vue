@@ -7,6 +7,7 @@ import ThreeSixtyDialogWhatsapp from './360DialogWhatsapp.vue';
 import CloudWhatsapp from './CloudWhatsapp.vue';
 import WhatsappManualSetup from './WhatsappManualSetup.vue';
 import WhatsappEmbeddedSignup from './WhatsappEmbeddedSignup.vue';
+import WhatsappWeb from './WhatsappWeb.vue';
 import WhatsappAccessRequestDialog from '../components/WhatsappAccessRequestDialog.vue';
 import ChannelSelector from 'dashboard/components/ChannelSelector.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -33,6 +34,7 @@ const PROVIDER_TYPES = {
   WHATSAPP_EMBEDDED: 'whatsapp_embedded',
   WHATSAPP_MANUAL: 'whatsapp_manual',
   THREE_SIXTY_DIALOG: '360dialog',
+  WHATSAPP_WEB: 'whatsapp_web',
 };
 
 const hasWhatsappAppId = computed(() => {
@@ -90,6 +92,17 @@ const availableProviders = computed(() => [
     description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO_DESC'),
     icon: 'i-woot-twilio',
   },
+  // WaDesk: only for accounts whose plan includes WhatsApp Web (ADR-0005).
+  ...(isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_WEB)
+    ? [
+        {
+          key: PROVIDER_TYPES.WHATSAPP_WEB,
+          title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_WEB'),
+          description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_WEB_DESC'),
+          icon: 'i-woot-whatsapp',
+        },
+      ]
+    : []),
 ]);
 
 const providerSelectionDescription = computed(() =>
@@ -266,6 +279,9 @@ const requestEmbeddedSignupAccess = () => {
         />
         <ThreeSixtyDialogWhatsapp
           v-else-if="selectedProvider === PROVIDER_TYPES.THREE_SIXTY_DIALOG"
+        />
+        <WhatsappWeb
+          v-else-if="selectedProvider === PROVIDER_TYPES.WHATSAPP_WEB"
         />
         <CloudWhatsapp v-else />
       </div>

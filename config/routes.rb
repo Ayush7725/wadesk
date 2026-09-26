@@ -324,6 +324,9 @@ Rails.application.routes.draw do
             post :register_webhook, on: :member
             post :reset_secret, on: :member
             post :rotate_hmac_token, on: :member
+            resource :whatsapp_web_session, only: [:show, :destroy], controller: 'whatsapp_web/sessions' do
+              post :reconnect
+            end
             if ChatwootApp.enterprise?
               resource :conference, only: %i[create destroy], controller: 'conference' do
                 get :token, on: :member
