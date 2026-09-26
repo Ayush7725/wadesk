@@ -1,0 +1,34 @@
+name: WaDesk UI bundle
+
+# Builds the dashboard's frontend once on GitHub and stores it as an artifact, so machines that can't
+# compile the frontend (e.g. the 15 GB dev laptop) can run the UI: bin/wadesk-dev ui-bundle && bin/wadesk-dev server-prebuilt
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build the development bundle (public/vite-dev)
+        run: bin/vite build
+        env:
+          RAILS_ENV: development
+          NODE_OPTIONS: --max-old-space-size=6144 --openssl-legacy-provider
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wadesk-ui-bundle
+          path: public/vite-dev
+          retention-days: 14
