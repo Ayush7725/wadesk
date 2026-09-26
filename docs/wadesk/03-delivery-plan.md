@@ -64,7 +64,7 @@ Covers WW-FR-20, 21, 22, 23, 24, 25
 | M3.4 Remove 24h window for `baileys`; new-conversation-by-phone works | Specs |
 | M3.5 Daily business-initiated chat cap for Web inboxes (SAFE-FR-02) | Service + request specs |
 | M3.6 Block campaigns/bulk on `baileys` inboxes at the API boundary (SAFE-FR-01) | ✅ Done in M2.6 (model guard, 422 on create) |
-| M3.7 Opt-out keyword detection, consent events table, private note (SAFE-FR-10/11) | Model/service specs incl. Hindi/Hinglish and no-partial-match cases |
+| M3.7 Opt-out keyword detection, consent events table, activity note for agents (SAFE-FR-10/11) | Model/service/listener specs incl. Hindi/Hinglish and no-partial-match cases |
 
 **Acceptance:** agent replies (text, image, PDF, quoted reply) arrive on the customer phone; ticks progress
 sent → delivered → read; sending while disconnected shows a clear failure; replying after 24h works.

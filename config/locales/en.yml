@@ -737,3 +737,6 @@ en:
         test_email:
           queued: 'Test email on its way to %{email}. Ask the user to check their inbox and spam folder.'
           subject: 'Test email from %{brand_name} support'
+  wadesk:
+    consent:
+      opted_out_activity: '%{name} opted out of marketing messages ("%{text}"). You can still reply to their questions.'

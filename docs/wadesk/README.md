@@ -88,5 +88,9 @@ dev server). On Fedora it uses the rootless Podman socket automatically.
 
 Engine commands are in [wadesk-engine/README.md](../../wadesk-engine/README.md).
 
+**Migrations:** in dev the engine keeps its `wadesk_engine` schema in Chatwoot's database, so `rails db:migrate` dumps
+an extra `create_schema "wadesk_engine"` (and may bump the `[7.1]` header or re-annotate models). Commit only the
+new table/columns in `db/schema.rb`, keep the header as-is, and revert unrelated model annotations.
+
 The laptop has limited memory: stop the demo stacks (`docker compose stop` in the demo folders) before heavy work
 such as `setup` or the full spec suite.
