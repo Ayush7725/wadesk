@@ -9,6 +9,7 @@
 #   bin/wadesk-dev server                 run Chatwoot (http://localhost:3300) + engine (http://localhost:4400)
 #   bin/wadesk-dev ui-bundle              download the latest frontend bundle built on GitHub (workflow "WaDesk UI bundle")
 #   bin/wadesk-dev server-prebuilt        Chatwoot + engine using that bundle, without compiling the frontend (low memory)
+#   bin/wadesk-dev smoke                  check the running stack is wired up (run before every demo)
 #   bin/wadesk-dev down                   stop everything (data volumes are kept)
 #   bin/wadesk-dev engine <pnpm args>    run pnpm in wadesk-engine against the dev Postgres (e.g. `engine test`)
 #   bin/wadesk-dev pre-commit             Chatwoot's pre-commit checks (.husky/pre-commit), run in the toolbox
@@ -54,8 +55,25 @@ case "$cmd" in
   server-prebuilt)
     [ -f public/vite-dev/.vite/manifest.json ] || [ -f public/vite-dev/manifest.json ] || { echo "Run bin/wadesk-dev ui-bundle first"; exit 1; }
     compose --profile prebuilt up web-prebuilt worker engine ;;
+  smoke)
+    # Checks the pieces reach each other the way the running mode wires them (docs/wadesk/README.md, DoD rule 6).
+    rails=$(compose ps --status running --services | grep -xE 'web|web-prebuilt' || true)
+    [ -n "$rails" ] || { echo "FAIL Chatwoot is not running (bin/wadesk-dev server or server-prebuilt)"; exit 1; }
+    check() { if eval "$2" >/dev/null 2>&1; then echo "ok   $1"; else echo "FAIL $1"; failed=1; fi; }
+    failed=0
+    check "Chatwoot answers on http://localhost:3300" "curl -sf -o /dev/null http://localhost:3300/"
+    check "engine answers on http://localhost:4400" "curl -sf -o /dev/null http://localhost:4400/health"
+    check "Chatwoot ($rails) reaches the engine at WADESK_ENGINE_URL" \
+      "compose exec -T $rails ruby -rnet/http -e 'exit Net::HTTP.get_response(URI(ENV.fetch(\"WADESK_ENGINE_URL\") + \"/health\")).is_a?(Net::HTTPSuccess)'"
+    callback=$(compose exec -T "$rails" printenv WADESK_ENGINE_CALLBACK_BASE_URL | tr -d '\r')
+    check "engine reaches Chatwoot's webhooks at $callback" \
+      "compose exec -T engine node -e 'fetch(process.argv[1]).then(r => process.exit(r.status < 500 ? 0 : 1), () => process.exit(1))' '$callback'"
+    if [ "$rails" = web-prebuilt ]; then
+      check "prebuilt frontend bundle present" "[ -f public/vite-dev/.vite/manifest.json ]"
+    fi
+    exit "$failed" ;;
   down)    compose --profile app --profile prebuilt down ;;
   pre-commit) run toolbox sh .husky/pre-commit ;;
   engine)  run -w /app/wadesk-engine -e WADESK_ENGINE_DATABASE_URL=postgres://postgres@db:5432/wadesk_engine_test toolbox pnpm "$@" ;;
-  *)       sed -n '2,16p' "$0" ;;
+  *)       sed -n '2,17p' "$0" ;;
 esac
