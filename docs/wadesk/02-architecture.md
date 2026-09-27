@@ -80,12 +80,16 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 
 | File | Change |
 |---|---|
-| `app/models/channel/whatsapp.rb` | Add `baileys` to `PROVIDERS`; `provider_service` branch; `include WhatsappWebChannel` (lifecycle and gating live in the concern) |
+| `app/models/channel/whatsapp.rb` | Add `baileys` to `PROVIDERS`; `provider_service` branch; `include WhatsappWebChannel` (lifecycle and gating live in the concern); `include WhatsappOfficialPlan` + `whatsapp_official?` / `whatsapp_type_changing?` (ADR-0008) |
+| `app/models/channel/twilio_sms.rb` | `include WhatsappOfficialPlan`; Twilio WhatsApp counts as Official (ADR-0008) |
 | `app/services/conversations/message_window_service.rb` | No 24-hour window for `baileys` (WW-FR-24) |
 | `config/routes.rb` | Engine webhook route + UI session routes |
-| `config/features.yml` | Append `whatsapp_web` flag (`feature_flags_ext_1`) |
+| `config/features.yml` | Append `whatsapp_web` and `whatsapp_official` flags (`feature_flags_ext_1`); migration turns `whatsapp_official` on for existing accounts |
 | `app/javascript/dashboard/featureFlags.js` | `WHATSAPP_WEB` constant |
-| `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Whatsapp.vue` | Offer "WhatsApp Web" provider when the flag is on |
+| `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Whatsapp.vue` | Offer "WhatsApp Web" provider when the flag is on; Official providers (Cloud, Twilio) only with `whatsapp_official` |
+| `settings/inbox/ChannelList.vue`, `onboarding/inbox-setup/useChannelConfig.js` | WhatsApp card only with Official or Web; WhatsApp calling and onboarding (embedded signup) need Official |
+| `config/routes.rb` (super_admin), `app/views/super_admin/application/_navigation.html.erb` | *WaDesk clients* page (ADR-0008): route, nav entry, skip in the automatic resource nav loop |
+| `spec/factories/accounts.rb` | Test accounts get `whatsapp_official`, as real new accounts do via feature defaults |
 | `app/javascript/dashboard/composables/useInbox.js`, `app/javascript/shared/mixins/inboxMixin.js` | `isAWhatsAppWebChannel` helper |
 | `app/javascript/dashboard/components-next/Conversation/InboxName.vue`, `settings/inbox/Index.vue` | Official / Web badge next to WhatsApp inbox names (SAFE-FR-04) |
 | `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json` | New strings (other locales fall back to English) |

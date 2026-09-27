@@ -1,0 +1,65 @@
+<% content_for(:title) do %>WaDesk Clients<% end %>
+
+<header class="main-content__header" role="banner">
+  <h1 class="main-content__page-title" id="page-title">WaDesk Clients</h1>
+  <%= form_with url: super_admin_wadesk_clients_path, method: :get, local: true, class: 'flex gap-2 items-center' do |f| %>
+    <%= f.search_field :search, value: @search, placeholder: 'Account name or ID', class: 'border border-slate-100 p-1.5 rounded-md w-64' %>
+    <%= f.submit 'Search', name: nil, class: 'border border-slate-200 bg-slate-50 px-3 py-1.5 rounded-md cursor-pointer' %>
+  <% end %>
+</header>
+
+<section class="main-content__body">
+  <p class="text-sm text-slate-600 mb-6">
+    Each client's plan decides which WhatsApp inboxes it can create. Turning a plan off keeps existing inboxes working;
+    only new ones of that type are blocked.
+  </p>
+
+  <% if @accounts.empty? %>
+    <p class="text-sm text-slate-600">No accounts found.</p>
+  <% else %>
+    <table class="w-full text-sm border border-slate-100 rounded-md" aria-labelledby="page-title">
+      <thead class="text-left text-xs text-slate-500 bg-slate-25">
+        <tr>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">ID</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Name</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Status</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">WhatsApp Official</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">WhatsApp Web</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Web daily new chats</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Official inboxes</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Web inboxes</th>
+          <th class="px-3 py-2 first:!pl-4 last:!pr-4"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @accounts.each do |account| %>
+          <% limit = account.custom_attributes[SuperAdmin::WadeskClientsController::LIMIT_KEY] %>
+          <tr class="border-t border-slate-100 align-middle" data-account-id="<%= account.id %>">
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.id %></td>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.name %></td>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.status %></td>
+            <% SuperAdmin::WadeskClientsController::PLAN_FEATURES.each_key do |feature| %>
+              <td class="px-3 py-2 first:!pl-4 last:!pr-4">
+                <% if account.feature_enabled?(feature) %>
+                  <span class="text-green-700">On</span>
+                <% else %>
+                  <span class="text-slate-400">Off</span>
+                <% end %>
+              </td>
+            <% end %>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4">
+              <%= limit.presence || "#{Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT} (default)" %>
+            </td>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= @inbox_counts['whatsapp_official'][account.id].to_i %></td>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= @inbox_counts['whatsapp_web'][account.id].to_i %></td>
+            <td class="px-3 py-2 first:!pl-4 last:!pr-4">
+              <%= link_to 'Edit plan', edit_super_admin_wadesk_client_path(account), class: 'action-edit' %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= paginate @accounts %>
+</section>

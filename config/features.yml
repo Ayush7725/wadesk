@@ -293,3 +293,7 @@
   display_name: WhatsApp Web
   enabled: false
   column: feature_flags_ext_1
+- name: whatsapp_official
+  display_name: WhatsApp Official
+  enabled: true
+  column: feature_flags_ext_1

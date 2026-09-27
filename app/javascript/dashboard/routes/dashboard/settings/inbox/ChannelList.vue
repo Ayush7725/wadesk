@@ -107,7 +107,14 @@ const channelList = computed(() => {
     icon: 'i-woot-whatsapp',
   });
 
-  return channels;
+  // WaDesk: WhatsApp cards follow the account's plan. WhatsApp Calling runs on a Cloud API inbox (Official).
+  const { whatsapp_official: official, whatsapp_web: web } =
+    enabledFeatures.value;
+  return channels.filter(
+    ({ key }) =>
+      (key !== 'whatsapp' || official || web) &&
+      (key !== 'whatsapp_call' || official)
+  );
 });
 
 const initChannelAuth = channel => {

@@ -26,6 +26,7 @@ class Channel::Whatsapp < ApplicationRecord
   include Channelable
   include Reauthorizable
   include WhatsappWebChannel
+  include WhatsappOfficialPlan
 
   self.table_name = 'channel_whatsapp'
   EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
@@ -46,6 +47,15 @@ class Channel::Whatsapp < ApplicationRecord
 
   def name
     'Whatsapp'
+  end
+
+  # WaDesk: every provider except WhatsApp Web (baileys) is Official WhatsApp.
+  def whatsapp_official?
+    !whatsapp_web?
+  end
+
+  def whatsapp_type_changing?
+    will_save_change_to_provider?
   end
 
   # Mirrors Channel::TwilioSms#voice_enabled? so the call subsystem can duck-type across providers.

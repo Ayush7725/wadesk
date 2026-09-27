@@ -78,20 +78,27 @@ const shouldShowEmbeddedSignupAccessRequest = computed(() => {
 });
 
 const availableProviders = computed(() => [
-  {
-    key: PROVIDER_TYPES.WHATSAPP,
-    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD'),
-    description: isWhatsappEmbeddedSignupDisabled.value
-      ? t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_MANUAL_SETUP_DESC')
-      : t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_DESC'),
-    icon: 'i-woot-whatsapp',
-  },
-  {
-    key: PROVIDER_TYPES.TWILIO,
-    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO'),
-    description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO_DESC'),
-    icon: 'i-woot-twilio',
-  },
+  // WaDesk: Cloud API (incl. embedded signup) and Twilio are Official WhatsApp, only for accounts on that plan.
+  ...(isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_OFFICIAL)
+    ? [
+        {
+          key: PROVIDER_TYPES.WHATSAPP,
+          title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD'),
+          description: isWhatsappEmbeddedSignupDisabled.value
+            ? t(
+                'INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_MANUAL_SETUP_DESC'
+              )
+            : t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_DESC'),
+          icon: 'i-woot-whatsapp',
+        },
+        {
+          key: PROVIDER_TYPES.TWILIO,
+          title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO'),
+          description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO_DESC'),
+          icon: 'i-woot-twilio',
+        },
+      ]
+    : []),
   // WaDesk: only for accounts whose plan includes WhatsApp Web (ADR-0005).
   ...(isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_WEB)
     ? [

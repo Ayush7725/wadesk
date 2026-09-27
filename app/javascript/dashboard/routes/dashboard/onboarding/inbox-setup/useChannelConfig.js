@@ -19,7 +19,9 @@ export function useChannelConfig() {
   const CHANNEL_CONFIGURED = {
     // WhatsApp is onboarded only via Meta embedded signup, which needs both the
     // app id (not the 'none' sentinel) and the signup configuration id.
+    // WaDesk: embedded signup creates an Official WhatsApp inbox, only for accounts on that plan.
     whatsapp: () =>
+      isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_OFFICIAL) &&
       !isMetaInboxCreationDisabled.value &&
       (!isOnChatwootCloud.value ||
         isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_EMBEDDED_SIGNUP_FLOW)) &&
