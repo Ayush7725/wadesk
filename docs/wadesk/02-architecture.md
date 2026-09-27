@@ -97,6 +97,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `settings/inbox/Settings.vue` | WhatsApp Web inboxes get the Configuration tab and the "WhatsApp Web" API provider name |
 | `app/views/api/v1/models/_inbox.json.jbuilder` | `reauthorization_required` is also reported for WhatsApp Web inboxes, so the sidebar shows the re-link alert |
 | `settings/inbox/FinishSetup.vue` | No "chat with this number" QR code on the finish screen for WhatsApp Web inboxes (it was confused with the linking QR) |
+| `dashboard/composables/usePolicy.js`, `dashboard/routes/index.js`, `dashboard/routes/dashboard/dashboard.routes.js`, `i18n/locale/en/settings.json` | Features the operator switches per client (`OPERATOR_FEATURE_FLAGS` in `helper/featureGate.js`) are hidden in the sidebar and a direct link shows "not on your plan"; other flags keep upstream behaviour (ADR-0009) |
 | `config/routes.rb` (super_admin), `app/views/super_admin/application/_navigation.html.erb` | *WhatsApp Web numbers* page in Super Admin (WW-FR-31): route, nav entry, and a skip in the automatic resource nav loop (custom page, no Administrate dashboard) |
 | `config/routes.rb` (super_admin root), `app/views/super_admin/application/_navigation.html.erb` | Super Admin's home is the WaDesk operator console; Chatwoot's dashboard moves to `/super_admin/chatwoot` and its nav links back to the console (ADR-0008) |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |

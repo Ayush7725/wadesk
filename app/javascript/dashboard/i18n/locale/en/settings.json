@@ -271,6 +271,11 @@
       "MESSAGE": "Your account has been suspended due to activity that may violate our policies. If you believe this is a mistake, please contact our support team.",
       "MANAGE_BILLING": "Manage billing"
     },
+    "FEATURE_NOT_ON_PLAN": {
+      "TITLE": "This feature isn't on your plan",
+      "MESSAGE": "Ask your WaDesk account manager to turn it on.",
+      "BACK_TO_CONVERSATIONS": "Back to conversations"
+    },
     "NO_ACCOUNTS": {
       "TITLE": "No account found",
       "MESSAGE_CLOUD": "You are not part of any accounts right now. If you think this is a mistake, please reach out to our support team.",

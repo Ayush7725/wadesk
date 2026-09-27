@@ -7,6 +7,7 @@ import {
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
 import { PREMIUM_FEATURES } from 'dashboard/featureFlags';
+import { OPERATOR_FEATURE_FLAGS } from 'dashboard/helper/featureGate';
 
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
 
@@ -99,6 +100,11 @@ export function usePolicy() {
         (isPremiumFeature(flag) && !hasPremiumEnterprise.value)
       );
     }
+
+    // WaDesk: on community installs the features the operator switches per
+    // client follow the account's flags; every other flag stays shown.
+    if (OPERATOR_FEATURE_FLAGS.includes(flag))
+      return isFeatureFlagEnabled(flag);
 
     // default to true
     return true;
