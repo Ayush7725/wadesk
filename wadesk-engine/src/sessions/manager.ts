@@ -35,9 +35,11 @@ export class SessionManager {
     }
 
     if (running) {
-      // Same number: reconnect with the stored credentials. New number: unlink the old device first.
-      if (running.expectedPhone === expectedPhone) running.stop();
-      else await running.logout();
+      // Same number: reconnect with the stored credentials, or start clean if it was still waiting to be linked.
+      // New number: unlink the old device first.
+      if (running.expectedPhone !== expectedPhone) await running.logout();
+      else if (running.currentState === 'qr_pending') await running.cancelLinking();
+      else running.stop();
       this.sessions.delete(id);
     }
     const existing = await this.deps.repository.find(id);

@@ -194,6 +194,23 @@ describe('SessionManager', () => {
     expect((await repository.find('t-1'))?.linkMethod).toBe('code');
   });
 
+  it('starts clean when the admin switches method after a pairing code was requested', async () => {
+    const { manager, sockets } = build();
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'code');
+    socketAt(sockets, 0).credsChanged();
+    socketAt(sockets, 0).update({ qr: 'qr' });
+    await eventually(async () => expect((await manager.get('t-1')).pairingCode).toBe('CODE0001'));
+    await eventually(async () => expect(await credsCount('t-1')).toBe(1));
+
+    await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+
+    expect(sockets.map((socket) => socket.linkMethod)).toEqual(['code', 'qr']);
+    expect(await credsCount('t-1')).toBe(0);
+    socketAt(sockets, 1).update({ qr: 'qr' });
+    await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'qr_pending', qr: 'qr' }));
+    expect(statesOf('t-1')).not.toContain('logged_out');
+  });
+
   it('ignores a method switch once connected and reconnects with the method it was linked by', async () => {
     const first = build();
     await first.manager.upsert('t-1', PHONE, WEBHOOK, 'code');
@@ -262,6 +279,7 @@ describe('SessionManager', () => {
   it('stops offering QR codes after the QR timeout', async () => {
     const { manager, sockets } = build({ timing: SHORT_QR });
     await manager.upsert('t-1', PHONE, WEBHOOK, 'qr');
+    socketAt(sockets, 0).credsChanged();
     socketAt(sockets, 0).update({ qr: 'qr' });
     await eventually(async () => expect((await manager.get('t-1')).state).toBe('qr_pending'));
 
@@ -269,6 +287,7 @@ describe('SessionManager', () => {
     socketAt(sockets, 0).close(DisconnectReason.timedOut);
 
     await eventually(async () => expect(await manager.get('t-1')).toEqual({ state: 'disconnected', lastError: 'qr_expired' }));
+    expect(await credsCount('t-1')).toBe(0); // never linked, so the next attempt starts clean
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(sockets).toHaveLength(1);
   });
