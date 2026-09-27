@@ -182,6 +182,9 @@ export default {
       if (this.isATwilioWhatsAppChannel) {
         return this.$t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO');
       }
+      if (this.isAWhatsAppWebChannel) {
+        return this.$t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_WEB');
+      }
       return '';
     },
     tabs() {
@@ -224,6 +227,7 @@ export default {
         this.isAPIInbox ||
         (this.isAnEmailChannel && !this.inbox.provider) ||
         this.shouldShowWhatsAppConfiguration ||
+        this.isAWhatsAppWebChannel ||
         this.isAWebWidgetInbox
       ) {
         visibleToAllChannelTabs = [
