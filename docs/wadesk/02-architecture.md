@@ -91,6 +91,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json` | New strings (other locales fall back to English) |
 | `settings/inbox/settingsPage/ConfigurationPage.vue` | WhatsApp Web inboxes show `WhatsappWebSettings` (connection, link method, log out) instead of the Cloud API key/webhook/template fields |
 | `settings/inbox/Settings.vue` | WhatsApp Web inboxes get the Configuration tab and the "WhatsApp Web" API provider name |
+| `app/views/api/v1/models/_inbox.json.jbuilder` | `reauthorization_required` is also reported for WhatsApp Web inboxes, so the sidebar shows the re-link alert |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |
