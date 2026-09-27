@@ -64,6 +64,21 @@ describe('WhatsApp provider picker', () => {
     expect(providerTitles({ whatsapp_web: true })).toEqual([WEB]);
   });
 
+  it('describes only WhatsApp Web to accounts without WhatsApp Official', () => {
+    const picker = features =>
+      mountWithPlan(Whatsapp, features, {
+        ChannelSelector: true,
+        WhatsappAccessRequestDialog: true,
+      }).text();
+    const webOnly =
+      'INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.WEB_ONLY_DESCRIPTION';
+
+    expect(picker({ whatsapp_web: true })).toContain(webOnly);
+    expect(
+      picker({ whatsapp_official: true, whatsapp_web: true })
+    ).not.toContain(webOnly);
+  });
+
   it('offers every provider to accounts on both plans', () => {
     expect(
       providerTitles({ whatsapp_official: true, whatsapp_web: true })

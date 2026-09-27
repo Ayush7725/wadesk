@@ -260,7 +260,8 @@
         "SELECT_PROVIDER": {
           "TITLE": "Select your API provider",
           "DESCRIPTION": "Choose your WhatsApp provider. You can connect directly through Meta which requires no setup, or connect through Twilio using your account credentials.",
-          "RESTRICTION_DESCRIPTION": "Choose your WhatsApp provider. You can connect WhatsApp Cloud manually using your Cloud API credentials, or connect through Twilio using your account credentials."
+          "RESTRICTION_DESCRIPTION": "Choose your WhatsApp provider. You can connect WhatsApp Cloud manually using your Cloud API credentials, or connect through Twilio using your account credentials.",
+          "WEB_ONLY_DESCRIPTION": "Your plan includes WhatsApp Web: link your business phone by scanning a QR code or entering a pairing code."
         },
         "INBOX_NAME": {
           "LABEL": "Inbox Name",
