@@ -765,6 +765,9 @@ Rails.application.routes.draw do
         post :reset_cache, on: :member
       end
       resources :wadesk_clients, only: [:index, :edit, :update] # WaDesk: client plans and the daily new-chat limit
+      resources :wadesk_users, only: [:index] # WaDesk: operator console users (S2.3)
+      resource :wadesk_system_health, only: [:show] # WaDesk: operator console system health (S2.3)
+      resource :wadesk_settings, only: [:show] # WaDesk: operator console settings (S2.3)
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
         delete :avatar, on: :member, action: :destroy_avatar
         post :resend_confirmation, on: :member
