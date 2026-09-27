@@ -28,7 +28,9 @@ if [ -z "${DOCKER_HOST:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/podman/po
 fi
 compose() { docker compose -f docker-compose.wadesk-dev.yaml "$@"; }
 # Tests use their own Redis database so the dev worker never picks up jobs enqueued by specs.
-TEST_ENV=(-e RAILS_ENV=test -e REDIS_URL=redis://redis:6379/1)
+# Specs that render full pages must never build the frontend here (it froze this laptop): they use the bundle from
+# `bin/wadesk-dev ui-bundle`, and without it they fail fast instead of building.
+TEST_ENV=(-e RAILS_ENV=test -e REDIS_URL=redis://redis:6379/1 -e VITE_RUBY_AUTO_BUILD=false)
 run() { compose up -d --wait toolbox >/dev/null 2>&1 && compose exec -T "$@"; }
 
 cmd="${1:-help}"; shift || true
@@ -47,11 +49,13 @@ case "$cmd" in
   sh)      compose up -d --wait toolbox >/dev/null 2>&1 && compose exec toolbox bash ;;
   server)  compose --profile app up web worker vite engine mailpit ;;
   ui-bundle)
-    rm -rf public/vite-dev
+    rm -rf public/vite-dev public/vite-test
     # Needs a gh login with access to the repo; set WADESK_GH_USER to pick a non-active gh account.
     GH_TOKEN="${GH_TOKEN:-$(gh auth token ${WADESK_GH_USER:+--user "$WADESK_GH_USER"})}" \
       gh run download --repo "${WADESK_REPO:-Ayush7725/wadesk}" --name wadesk-ui-bundle --dir public/vite-dev
-    echo "Frontend bundle ready in public/vite-dev" ;;
+    # Specs read the test bundle folder; the same files serve them without a local build.
+    cp -r public/vite-dev public/vite-test
+    echo "Frontend bundle ready in public/vite-dev (and public/vite-test for specs)" ;;
   server-prebuilt)
     [ -f public/vite-dev/.vite/manifest.json ] || [ -f public/vite-dev/manifest.json ] || { echo "Run bin/wadesk-dev ui-bundle first"; exit 1; }
     compose --profile prebuilt up web-prebuilt worker engine mailpit ;;

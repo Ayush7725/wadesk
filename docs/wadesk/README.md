@@ -93,7 +93,7 @@ dev server). On Fedora it uses the rootless Podman socket automatically.
 | Command | Purpose |
 |---|---|
 | `bin/wadesk-dev setup` | First-time (and after dependency changes): build toolbox, install gems/packages, prepare dev + test DBs |
-| `bin/wadesk-dev rspec spec/models/channel/whatsapp_spec.rb` | Run backend specs |
+| `bin/wadesk-dev rspec spec/models/channel/whatsapp_spec.rb` | Run backend specs. They never build the frontend locally: specs that render full pages (e.g. Super Admin) use the bundle from `ui-bundle`, and fail fast without it |
 | `bin/wadesk-dev rubocop app/models/channel/whatsapp.rb` | Lint Ruby |
 | `bin/wadesk-dev pnpm test` / `bin/wadesk-dev pnpm eslint` | Frontend tests / lint |
 | `bin/wadesk-dev sh` | Shell inside the toolbox |
