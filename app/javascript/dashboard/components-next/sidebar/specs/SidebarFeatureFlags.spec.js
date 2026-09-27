@@ -183,6 +183,19 @@ describe('Sidebar with per-account feature flags (community install)', () => {
     expect(hasLink(wrapper, '/app/accounts/1/campaigns/live_chat')).toBe(false);
   });
 
+  it('leaves flags the operator does not switch alone (assignment_v2)', async () => {
+    // Agent Assignment is listed when advanced_assignment is on; its route
+    // is flagged assignment_v2, which is not an operator plan feature.
+    const wrapper = await mountSidebar({
+      advanced_assignment: true,
+      assignment_v2: false,
+    });
+
+    expect(hasLink(wrapper, '/app/accounts/1/settings/assignment-policy')).toBe(
+      true
+    );
+  });
+
   it('leaves entries without a feature flag alone', async () => {
     const wrapper = await mountSidebar({
       campaigns: false,

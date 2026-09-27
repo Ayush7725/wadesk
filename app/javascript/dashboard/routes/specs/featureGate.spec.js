@@ -154,6 +154,16 @@ describe('feature gate on direct URLs', () => {
     store.getters['globalConfig/isOnChatwootCloud'] = false;
   });
 
+  it('leaves flags the operator does not switch alone (assignment_v2)', async () => {
+    openAccount(accountWith({ assignment_v2: false }));
+
+    const route = await visit(
+      '/app/accounts/1/settings/assignment-policy/index'
+    );
+
+    expect(route.name).toBe('assignment_policy_index');
+  });
+
   it('leaves pages without a feature flag alone', async () => {
     openAccount(
       accountWith({

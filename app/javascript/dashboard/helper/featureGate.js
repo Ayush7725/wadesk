@@ -1,8 +1,40 @@
 // WaDesk: pages of a feature that is switched off for the account open a
 // "not on your plan" page instead. Only the UI is gated; the API is not.
-import { PREMIUM_FEATURES } from 'dashboard/featureFlags';
+import { FEATURE_FLAGS, PREMIUM_FEATURES } from 'dashboard/featureFlags';
 
 export const FEATURE_NOT_ON_PLAN_PATH = 'not-on-plan';
+
+// The features the operator switches per client. Only these hide in the
+// sidebar and open "not on your plan" on community installs; every other flag
+// keeps upstream behaviour. Keep in sync with the list the Super Admin
+// "WaDesk clients" page offers (Ruby constant on the backend).
+export const OPERATOR_FEATURE_FLAGS = [
+  FEATURE_FLAGS.CAMPAIGNS,
+  FEATURE_FLAGS.WHATSAPP_CAMPAIGNS,
+  FEATURE_FLAGS.CANNED_RESPONSES,
+  FEATURE_FLAGS.MACROS,
+  FEATURE_FLAGS.VOICE_RECORDER,
+  FEATURE_FLAGS.HELP_CENTER,
+  FEATURE_FLAGS.AUTOMATIONS,
+  FEATURE_FLAGS.AGENT_BOTS,
+  FEATURE_FLAGS.DELAYED_AUTOMATIONS,
+  FEATURE_FLAGS.AUTO_RESOLVE_CONVERSATIONS,
+  FEATURE_FLAGS.REPORTS,
+  FEATURE_FLAGS.CRM,
+  FEATURE_FLAGS.COMPANIES,
+  FEATURE_FLAGS.CUSTOM_ATTRIBUTES,
+  FEATURE_FLAGS.LABELS,
+  FEATURE_FLAGS.AGENT_MANAGEMENT,
+  FEATURE_FLAGS.TEAM_MANAGEMENT,
+  FEATURE_FLAGS.INBOX_MANAGEMENT,
+  FEATURE_FLAGS.INTEGRATIONS,
+  FEATURE_FLAGS.DATA_IMPORT,
+  FEATURE_FLAGS.CHANNEL_WEBSITE,
+  FEATURE_FLAGS.CHANNEL_EMAIL,
+  FEATURE_FLAGS.CHANNEL_FACEBOOK,
+  FEATURE_FLAGS.CHANNEL_INSTAGRAM,
+  FEATURE_FLAGS.CHANNEL_TIKTOK,
+];
 
 // Flags of the route and every parent it is nested in.
 export const routeFeatureFlags = to => {
@@ -34,7 +66,8 @@ const loadAccount = async (store, accountId) => {
 // Returns the first flag that blocks `to` for the account, or null.
 export const findDisabledRouteFeature = async (to, accountId, store) => {
   const flags = routeFeatureFlags(to).filter(
-    flag => !keepsPremiumPaywall(flag, store)
+    flag =>
+      OPERATOR_FEATURE_FLAGS.includes(flag) && !keepsPremiumPaywall(flag, store)
   );
   if (!flags.length) return null;
 
