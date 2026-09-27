@@ -164,8 +164,6 @@
         <dd class="tabular-nums"><%= @agents_count %></dd>
         <dt class="text-n-slate-10">Created</dt>
         <dd><%= @account.created_at.strftime('%-d %b %Y') %></dd>
-        <dt class="text-n-slate-10">Account page</dt>
-        <dd><%= link_to 'Open in Chatwoot admin', super_admin_account_path(@account), class: 'font-medium text-n-blue-11 hover:underline' %></dd>
       </dl>
     </section>
 
