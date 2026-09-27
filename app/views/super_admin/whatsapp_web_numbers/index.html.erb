@@ -1,0 +1,81 @@
+<%# WaDesk: WhatsApp Web numbers of every client account and their connection state (WW-FR-31). %>
+<% content_for(:title) do %>WhatsApp Web Numbers<% end %>
+
+<header class="main-content__header" role="banner">
+  <h1 class="main-content__page-title" id="page-title">WhatsApp Web Numbers</h1>
+</header>
+
+<section class="main-content__body">
+  <p class="text-sm text-slate-600 mb-4">
+    State as last reported by the WhatsApp engine. Numbers that are not connected are listed first.
+  </p>
+
+  <div class="flex gap-4 mb-6 text-sm">
+    <div class="border border-slate-100 rounded-md px-4 py-2">Total <strong class="ml-1"><%= @summary[:total] %></strong></div>
+    <div class="border border-slate-100 rounded-md px-4 py-2">Connected <strong class="ml-1 text-green-700"><%= @summary[:connected] %></strong></div>
+    <div class="border border-slate-100 rounded-md px-4 py-2">
+      Needs attention <strong class="ml-1 text-red-600"><%= @summary[:total] - @summary[:connected] %></strong>
+    </div>
+  </div>
+
+  <div class="flex gap-2 mb-4 text-sm">
+    <% { 'all' => 'All', 'attention' => 'Needs attention', 'connected' => 'Connected' }.each do |filter, label| %>
+      <% active = @filter == filter %>
+      <%= link_to label, super_admin_whatsapp_web_numbers_path(filter: filter),
+                  class: "px-3 py-1.5 rounded-md border #{active ? 'border-woot-500 text-woot-500' : 'border-slate-200 text-slate-800'}" %>
+    <% end %>
+  </div>
+
+  <% if @numbers.empty? %>
+    <p class="text-sm text-slate-600">No WhatsApp Web numbers.</p>
+  <% else %>
+    <table class="w-full text-sm border border-slate-100 rounded-md">
+      <thead class="text-left text-xs text-slate-500 bg-slate-25">
+        <tr>
+          <th class="px-3 py-2">Account</th>
+          <th class="px-3 py-2">Inbox</th>
+          <th class="px-3 py-2">Number</th>
+          <th class="px-3 py-2">State</th>
+          <th class="px-3 py-2">Reason</th>
+          <th class="px-3 py-2">Last change</th>
+          <th class="px-3 py-2">Link method</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @numbers.each do |channel| %>
+          <% config = channel.provider_config %>
+          <% state = config['connection_state'] %>
+          <% changed_at = config['connection_updated_at'].presence && Time.zone.parse(config['connection_updated_at']) %>
+          <tr class="border-t border-slate-100 align-top">
+            <td class="px-3 py-2">
+              <%= link_to "##{channel.account.id} #{channel.account.name}", super_admin_account_path(channel.account), class: 'text-woot-500' %>
+            </td>
+            <td class="px-3 py-2"><%= channel.inbox.name %></td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <%= channel.phone_number %>
+              <% if config['connected_phone'].present? && config['connected_phone'] != channel.phone_number %>
+                <div class="text-xs text-slate-500">Linked phone: <%= config['connected_phone'] %></div>
+              <% end %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <span class="<%= state == 'connected' ? 'text-green-700' : 'text-red-600' %> font-medium"><%= state_label(state) %></span>
+              <% if channel.reauthorization_required? %>
+                <div class="mt-1 w-fit rounded bg-red-100 px-1.5 text-xs text-red-700">Needs re-link</div>
+              <% end %>
+            </td>
+            <td class="px-3 py-2"><%= reason_label(config['connection_reason']) if config['connection_reason'].present? %></td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <% if changed_at %>
+                <span title="<%= changed_at.utc.strftime('%Y-%m-%d %H:%M:%S UTC') %>"><%= time_ago_in_words(changed_at) %> ago</span>
+              <% else %>
+                <span class="text-slate-400">—</span>
+              <% end %>
+            </td>
+            <td class="px-3 py-2"><%= config['link_method'] == 'code' ? 'Phone number code' : 'QR code' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= paginate @numbers %>
+  <% end %>
+</section>

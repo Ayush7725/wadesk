@@ -778,6 +778,7 @@ Rails.application.routes.draw do
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update, :destroy]
       resources :platform_banners
       resource :instance_status, only: [:show]
+      resources :whatsapp_web_numbers, only: [:index] # WaDesk: WW-FR-31
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection
