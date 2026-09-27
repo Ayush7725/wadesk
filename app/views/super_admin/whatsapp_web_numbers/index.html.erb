@@ -53,8 +53,9 @@
             <td class="px-3 py-2"><%= channel.inbox.name %></td>
             <td class="px-3 py-2 whitespace-nowrap">
               <%= channel.phone_number %>
-              <% if config['connected_phone'].present? && config['connected_phone'] != channel.phone_number %>
-                <div class="text-xs text-slate-500">Linked phone: <%= config['connected_phone'] %></div>
+              <%# The engine reports the linked phone as digits only; the inbox number has a leading +. %>
+              <% if config['connected_phone'].present? && config['connected_phone'] != channel.phone_number.delete('+') %>
+                <div class="text-xs text-slate-500">Linked phone: +<%= config['connected_phone'] %></div>
               <% end %>
             </td>
             <td class="px-3 py-2 whitespace-nowrap">

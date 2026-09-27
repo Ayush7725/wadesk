@@ -6,10 +6,10 @@ RSpec.describe 'Super Admin WhatsApp Web numbers', type: :request do
   let(:clinic) { create(:account, name: 'Clinic Co').tap { |a| a.enable_features!('whatsapp_web') } }
   let(:numbers) do
     [
-      [shop, 'Shop Sales', '+911111111111', { 'state' => 'connected', 'me' => { 'phone' => '+911111111111' } }],
+      [shop, 'Shop Sales', '+911111111111', { 'state' => 'connected', 'me' => { 'phone' => '911111111111' } }],
       [shop, 'Shop Support', '+912222222222', { 'state' => 'logged_out', 'reason' => 'unlinked_from_phone' }],
       [clinic, 'Clinic Front Desk', '+913333333333', nil],
-      [clinic, 'Clinic Billing', '+914444444444', { 'state' => 'failed', 'reason' => 'number_mismatch', 'me' => { 'phone' => '+919999999999' } }]
+      [clinic, 'Clinic Billing', '+914444444444', { 'state' => 'failed', 'reason' => 'number_mismatch', 'me' => { 'phone' => '919999999999' } }]
     ]
   end
 
@@ -46,6 +46,7 @@ RSpec.describe 'Super Admin WhatsApp Web numbers', type: :request do
         expect(response.body).to include("href=\"/super_admin/accounts/#{shop.id}\"", "##{clinic.id} Clinic Co", '+911111111111', 'Connected')
         expect(response.body).to include('Logged out', 'Removed from the phone&#39;s Linked devices', 'Never linked')
         expect(response.body).to include('Could not link', 'A phone with a different number was linked', 'Linked phone: +919999999999')
+        expect(response.body.scan('Linked phone:').size).to eq(1) # the connected number linked with its own phone
       end
 
       it 'marks the number unlinked from the phone as needing a re-link and lists it before connected ones' do
