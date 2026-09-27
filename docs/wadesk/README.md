@@ -27,6 +27,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [0006](adr/0006-whatsapp-safety-layer.md) | WhatsApp Safety Layer; Web connections are conversations-only | Accepted (CR-001) |
 | [0007](adr/0007-device-label-per-link-method.md) | Device label depends on link method (QR "WaDesk", code "Chrome (Ubuntu)") | Accepted |
 | [0008](adr/0008-operator-screen-and-plan-flags.md) | Operator screen in Super Admin; plans as create-only feature flags | Accepted (CR-002) |
+| [0009](adr/0009-operator-console-and-feature-switches.md) | Operator console design; per-client feature switches (hide, not lock) | Accepted (CR-003) |
 
 ## Development process (SDLC)
 
@@ -46,6 +47,7 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 |---|---|---|
 | CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Approved 2026-09-25 |
 | CR-002 | Plan lock for Official WhatsApp and operator screen in Super Admin (ADR-0008, WW-FR-32/33) | Approved 2026-09-27 |
+| CR-003 | Operator console design and per-client feature switches (ADR-0009, WW-FR-34) | Approved 2026-09-27 |
 
 ### Branching and pull requests
 
