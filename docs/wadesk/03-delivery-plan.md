@@ -127,7 +127,21 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 
 | Item | Found | Needed by |
 |---|---|---|
-| **Operator screen for per-account settings** (also lists all WhatsApp Web sessions and their states — WW-FR-31). Chatwoot's Super Admin can only toggle account features and limits in the enterprise edition, which WaDesk does not use (ADR-0001). A build without `enterprise/` therefore has no UI to enable `whatsapp_web` or set the new-chat cap for a client; today this is done in the Rails console. Decide the production packaging and build a small operator screen. | M3.5 | Step 2 (before the first paying client) |
+| **Operator screen for per-account settings** — now planned as S2.1 below (CR-002). | M3.5 | Step 2 (before the first paying client) |
+
+## S2.1 — Operator screen and plan lock (CR-002, ADR-0008)
+
+**Status:** in progress. Covers WW-FR-31, 32, 33 · SAFE-FR-02 (operator setting), SAFE-NFR-03
+
+| Task | Output |
+|---|---|
+| S2.1a *WhatsApp Web numbers* page in Super Admin: every Web number, state, reason, last change, needs-re-link marker; attention first | Request specs incl. access control and nav entry |
+| S2.1b `whatsapp_official` flag (on for new and existing accounts); create-only gates for Official and Web channels at the model; Official options hidden in the new-inbox UI without the flag | Model, API (422) and frontend specs; existing inboxes keep saving after a flag is turned off |
+| S2.1c *WaDesk clients* page in Super Admin: switch Official / Web per account, set the daily new-chat limit | Request specs incl. invalid limits and the flag state the dashboard reads |
+
+**Acceptance:** without the console, the operator switches a test account to Web-only (the Official options disappear
+for it, its existing inboxes keep working), sets its daily new-chat limit, and sees its WhatsApp Web number and state
+on the numbers page.
 
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,

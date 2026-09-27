@@ -26,6 +26,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [0005](adr/0005-plan-gating-with-feature-flags.md) | Gate channel types per account with Chatwoot feature flags | Accepted |
 | [0006](adr/0006-whatsapp-safety-layer.md) | WhatsApp Safety Layer; Web connections are conversations-only | Accepted (CR-001) |
 | [0007](adr/0007-device-label-per-link-method.md) | Device label depends on link method (QR "WaDesk", code "Chrome (Ubuntu)") | Accepted |
+| [0008](adr/0008-operator-screen-and-plan-flags.md) | Operator screen in Super Admin; plans as create-only feature flags | Accepted (CR-002) |
 
 ## Development process (SDLC)
 
@@ -44,6 +45,7 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 | CR | Title | Status |
 |---|---|---|
 | CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Approved 2026-09-25 |
+| CR-002 | Plan lock for Official WhatsApp and operator screen in Super Admin (ADR-0008, WW-FR-32/33) | Approved 2026-09-27 |
 
 ### Branching and pull requests
 
