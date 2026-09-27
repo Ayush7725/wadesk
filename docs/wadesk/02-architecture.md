@@ -93,6 +93,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `settings/inbox/Settings.vue` | WhatsApp Web inboxes get the Configuration tab and the "WhatsApp Web" API provider name |
 | `app/views/api/v1/models/_inbox.json.jbuilder` | `reauthorization_required` is also reported for WhatsApp Web inboxes, so the sidebar shows the re-link alert |
 | `settings/inbox/FinishSetup.vue` | No "chat with this number" QR code on the finish screen for WhatsApp Web inboxes (it was confused with the linking QR) |
+| `config/routes.rb` (super_admin), `app/views/super_admin/application/_navigation.html.erb` | *WhatsApp Web numbers* page in Super Admin (WW-FR-31): route, nav entry, and a skip in the automatic resource nav loop (custom page, no Administrate dashboard) |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |

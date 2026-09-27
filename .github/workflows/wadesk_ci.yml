@@ -185,7 +185,8 @@ jobs:
       - name: Run targeted backend specs
         run: bundle exec rspec --format progress $(cat tmp/spec_targets.txt)
         env:
-          NODE_OPTIONS: --openssl-legacy-provider
+          # Specs that render full pages (e.g. Super Admin) build the frontend on first use; it needs a larger heap.
+          NODE_OPTIONS: --max-old-space-size=6144 --openssl-legacy-provider
       - name: Upload rails log folder
         uses: actions/upload-artifact@v4
         if: failure()
