@@ -10,6 +10,14 @@ RSpec.describe Wadesk::ClientFeatures do
     expect(described_class::NAMES.size).to eq(25)
   end
 
+  it 'offers exactly the features the client dashboard hides when they are switched off' do
+    constants = Rails.root.join('app/javascript/dashboard/featureFlags.js').read.scan(/(\w+): '([a-z0-9_]+)'/).to_h
+    gate = Rails.root.join('app/javascript/dashboard/helper/featureGate.js').read
+    dashboard_list = gate[/OPERATOR_FEATURE_FLAGS = \[(.*?)\]/m, 1].scan(/FEATURE_FLAGS\.(\w+)/).flatten.map { |name| constants.fetch(name) }
+
+    expect(dashboard_list).to match_array(described_class::NAMES)
+  end
+
   it 'warns in plain words when a feature with lasting effects is turned off' do
     warnings = described_class::BY_NAME.transform_values(&:off_warning).compact
 
