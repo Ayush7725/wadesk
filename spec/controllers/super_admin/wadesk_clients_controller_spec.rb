@@ -135,6 +135,9 @@ RSpec.describe 'Super Admin WaDesk clients', type: :request do
           expect(response.body).to include('Daily new-chat limit must be a whole number from 1 to 1000, or blank for the default (20).')
           expect(account.reload.custom_attributes[limit_key]).to eq(40)
           expect(account.feature_enabled?('whatsapp_official')).to be(true)
+          form = Nokogiri::HTML(response.body)
+          expect(form.at_css('input[type=checkbox][name="client[whatsapp_official]"]')['checked']).to be_nil # keeps the operator's choice
+          expect(form.at_css('input[type=checkbox][name="client[whatsapp_web]"]')['checked']).to eq('checked')
         end
       end
     end

@@ -5,7 +5,7 @@ module WhatsappWebChannel
 
   included do
     before_validation :default_whatsapp_web_link_method, if: :whatsapp_web?
-    validate :whatsapp_web_enabled_for_account, on: :create, if: :whatsapp_web?
+    validate :whatsapp_web_enabled_for_account, if: -> { whatsapp_web? && (new_record? || will_save_change_to_provider?) }
     after_commit :start_whatsapp_web_session, on: :create, if: :whatsapp_web?
     before_destroy :remove_whatsapp_web_session, if: :whatsapp_web?
   end
@@ -20,8 +20,8 @@ module WhatsappWebChannel
     provider_config['link_method'] ||= 'qr'
   end
 
-  # Plan gating at the model, so every creation path is covered (ADR-0005). Existing inboxes keep
-  # working if the feature is later disabled; suspension is defined with billing (Step 2).
+  # Plan gating at the model, so every creation path is covered (ADR-0005), including switching an existing inbox to
+  # WhatsApp Web. Existing inboxes keep working if the feature is later disabled; suspension is defined with billing.
   def whatsapp_web_enabled_for_account
     errors.add(:provider, 'WhatsApp Web is not enabled for this account') unless account.feature_enabled?('whatsapp_web')
   end

@@ -30,6 +30,17 @@ RSpec.describe WhatsappOfficialPlan do
       end
     end
 
+    it 'rejects switching an existing WhatsApp Web inbox to an Official provider without the plan' do
+      account.enable_features!('whatsapp_web')
+      channel = create(:channel_whatsapp, account: account, provider: 'baileys', provider_config: {}, sync_templates: false)
+      account.disable_features!('whatsapp_official')
+
+      channel.reload.provider = 'whatsapp_cloud'
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:base]).to include('WhatsApp Official is not enabled for this account')
+    end
+
     it 'does not gate WhatsApp Web inboxes on the Official plan' do
       account.disable_features!('whatsapp_official')
       account.enable_features!('whatsapp_web')
@@ -68,6 +79,16 @@ RSpec.describe WhatsappOfficialPlan do
       account.disable_features!('whatsapp_official')
 
       expect(build(:channel_twilio_sms, account: account)).to be_valid
+    end
+
+    it 'rejects switching an existing Twilio SMS inbox to WhatsApp without the plan' do
+      channel = create(:channel_twilio_sms, account: account)
+      account.disable_features!('whatsapp_official')
+
+      channel.reload.medium = :whatsapp
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:base]).to include('WhatsApp Official is not enabled for this account')
     end
 
     it 'keeps saving an existing Twilio WhatsApp inbox after the plan is turned off' do

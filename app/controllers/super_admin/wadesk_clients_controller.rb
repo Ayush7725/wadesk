@@ -18,6 +18,7 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
 
   def edit
     @daily_new_chats = @account.custom_attributes[LIMIT_KEY]
+    @selected_plans = PLAN_FEATURES.keys.select { |feature| @account.feature_enabled?(feature) }
     @inbox_counts = whatsapp_inbox_counts([@account.id])
   end
 
@@ -52,7 +53,9 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
     @daily_new_chats.blank? || (@daily_new_chats.match?(/\A\d+\z/) && DAILY_NEW_CHATS_RANGE.cover?(@daily_new_chats.to_i))
   end
 
+  # Re-shows the form with what the operator entered, so a rejected limit does not silently undo their plan choices.
   def render_invalid_limit
+    @selected_plans = PLAN_FEATURES.keys.select { |feature| plan_selected?(feature) }
     @inbox_counts = whatsapp_inbox_counts([@account.id])
     flash.now[:error] = "Daily new-chat limit must be a whole number from #{DAILY_NEW_CHATS_RANGE.min} to #{DAILY_NEW_CHATS_RANGE.max}, " \
                         "or blank for the default (#{Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT})."

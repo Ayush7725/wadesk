@@ -18,6 +18,16 @@ RSpec.describe WhatsappWebChannel do
       expect(channel.errors[:provider]).to include('WhatsApp Web is not enabled for this account')
     end
 
+    it 'rejects switching an existing Official inbox to WhatsApp Web without the feature' do
+      official = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+      account.disable_features!('whatsapp_web')
+
+      official.reload.provider = 'baileys'
+
+      expect(official).not_to be_valid
+      expect(official.errors[:provider]).to include('WhatsApp Web is not enabled for this account')
+    end
+
     it 'keeps existing inboxes valid after the feature is disabled' do
       channel.save!
       account.disable_features!('whatsapp_web')

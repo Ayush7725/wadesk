@@ -54,6 +54,10 @@ class Channel::TwilioSms < ApplicationRecord
   # WaDesk: Twilio WhatsApp is Official WhatsApp.
   alias whatsapp_official? whatsapp?
 
+  def whatsapp_type_changing?
+    will_save_change_to_medium?
+  end
+
   def name
     medium == 'sms' ? 'Twilio SMS' : 'Whatsapp'
   end

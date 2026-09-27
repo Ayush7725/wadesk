@@ -54,6 +54,10 @@ class Channel::Whatsapp < ApplicationRecord
     !whatsapp_web?
   end
 
+  def whatsapp_type_changing?
+    will_save_change_to_provider?
+  end
+
   # Mirrors Channel::TwilioSms#voice_enabled? so the call subsystem can duck-type across providers.
   # Meta's Calling API is available to any whatsapp_cloud inbox (embedded-signup or manual keys);
   # only 360dialog (default provider) can't reach the call APIs.
