@@ -1,6 +1,6 @@
 # 03 — Delivery plan: Step 1 "WhatsApp Web channel"
 
-**Status:** Approved (Gate A, 2026-09-25) · **Last updated:** 2026-09-25
+**Status:** Approved (Gate A, 2026-09-25) · **Last updated:** 2026-09-27
 
 Each milestone ends with **Gate B**: a demo to the product owner against its acceptance criteria.
 Tasks are delivered as one branch + one PR each, following the Definition of Done in [README](README.md).
@@ -38,9 +38,9 @@ Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 **Acceptance:** with curl only, a real test number links via QR and via pairing code; wrong number is rejected;
 engine restart restores the session without a new QR; unlinking from the phone produces a `logged_out` webhook.
 
-### M2 — Incoming messages into Chatwoot
+### M2 — Incoming messages into Chatwoot ✅
 
-**Status:** built (PRs #12–#16); verified on real phones 2026-09-27 ([record](acceptance/M2-M4.md)), acceptance awaiting approval.
+**Status:** built (PRs #12–#16); accepted 2026-09-27 after real-phone tests ([record](acceptance/M2-M4.md)).
 Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 
 | Task | Output |
@@ -55,9 +55,9 @@ Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 **Acceptance:** customer messages (text, image, voice note, document, reply) sent to the test number appear once,
 under the right contact, in a WhatsApp inbox; group messages do not appear; all existing WhatsApp specs pass.
 
-### M3 — Outgoing messages and status
+### M3 — Outgoing messages and status ✅
 
-**Status:** built (PRs #17–#23, incl. safety items M3.5–M3.7 and a security fix keeping Signal keys out of logs); verified on real phones 2026-09-27 ([record](acceptance/M2-M4.md)), acceptance awaiting approval.
+**Status:** built (PRs #17–#23, incl. safety items M3.5–M3.7 and a security fix keeping Signal keys out of logs); accepted 2026-09-27 after real-phone tests ([record](acceptance/M2-M4.md)).
 Covers WW-FR-20, 21, 22, 23, 24, 25
 
 | Task | Output |
@@ -73,9 +73,9 @@ Covers WW-FR-20, 21, 22, 23, 24, 25
 **Acceptance:** agent replies (text, image, PDF, quoted reply) arrive on the customer phone; ticks progress
 sent → delivered → read; sending while disconnected shows a clear failure; replying after 24h works.
 
-### M4 — Admin UI
+### M4 — Admin UI ✅
 
-**Status:** built (PRs #24, #25); tested in the browser with the GitHub-built bundle on 2026-09-27, fixes #30–#35 ([record](acceptance/M2-M4.md)); acceptance awaiting approval.
+**Status:** built (PRs #24, #25); tested in the browser with the GitHub-built bundle on 2026-09-27, fixes #30–#35; accepted 2026-09-27 ([record](acceptance/M2-M4.md)).
 Covers WW-FR-01, 02, 03, 05, 06, 08 (UI), 30 (UI), WW-NFR-10
 
 | Task | Output |
