@@ -35,6 +35,22 @@ export async function usePostgresAuthState(pool: Pool, sessionId: string, cipher
 
   const creds = (await readCreds()) ?? initAuthCreds();
 
+  // After clear() this store is dead: Baileys keeps flushing buffered keys for a moment after a socket ends, and
+  // those writes (e.g. an unlinked phone's contacts and devices) must not bring data back. Writes already in
+  // flight are awaited so they cannot land after the delete.
+  let cleared = false;
+  const pending = new Set<Promise<unknown>>();
+  const write = async (run: () => Promise<unknown>) => {
+    if (cleared) return;
+    const promise = run();
+    pending.add(promise);
+    try {
+      await promise;
+    } finally {
+      pending.delete(promise);
+    }
+  };
+
   const get = async <T extends keyof SignalDataTypeMap>(type: T, ids: string[]) => {
     const { rows } = await pool.query<{ key_id: string; value: Buffer }>(
       'SELECT key_id, value FROM wadesk_engine.auth_keys WHERE session_id = $1 AND category = $2 AND key_id = ANY($3)',
@@ -51,7 +67,8 @@ export async function usePostgresAuthState(pool: Pool, sessionId: string, cipher
   };
 
   // Applies all changes in one transaction: null deletes a key, anything else upserts it.
-  const set = async (data: SignalDataSet) => {
+  const set = (data: SignalDataSet) => write(() => applyChanges(data));
+  const applyChanges = async (data: SignalDataSet) => {
     const upserts: { category: string; keyId: string; value: Buffer }[] = [];
     const deletes: { category: string; keyId: string }[] = [];
     for (const [category, entries] of Object.entries(data)) {
@@ -90,14 +107,17 @@ export async function usePostgresAuthState(pool: Pool, sessionId: string, cipher
 
   return {
     state: { creds, keys: { get, set } },
-    saveCreds: async () => {
-      await pool.query(
-        `INSERT INTO wadesk_engine.auth_keys (session_id, category, key_id, value) VALUES ($1, $2, '', $3)
-         ON CONFLICT (session_id, category, key_id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-        [sessionId, CREDS, encode(creds)],
-      );
-    },
+    saveCreds: () =>
+      write(() =>
+        pool.query(
+          `INSERT INTO wadesk_engine.auth_keys (session_id, category, key_id, value) VALUES ($1, $2, '', $3)
+           ON CONFLICT (session_id, category, key_id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+          [sessionId, CREDS, encode(creds)],
+        ),
+      ),
     clear: async () => {
+      cleared = true;
+      await Promise.allSettled(pending);
       await pool.query('DELETE FROM wadesk_engine.auth_keys WHERE session_id = $1', [sessionId]);
     },
   };

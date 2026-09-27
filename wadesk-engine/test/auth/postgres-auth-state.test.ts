@@ -70,6 +70,20 @@ describe('usePostgresAuthState', () => {
     expect(Object.keys(await b.state.keys.get('sender-key', ['x']))).toEqual(['x']);
   });
 
+  it('ignores writes that arrive after it was cleared, including ones already in flight', async () => {
+    const a = await usePostgresAuthState(pool, 'a', cipher);
+    await a.saveCreds();
+    const inFlight = a.state.keys.set({ 'lid-mapping': { early: 'x' } });
+
+    await a.clear();
+    await inFlight;
+    await a.state.keys.set({ 'lid-mapping': { late: 'x' }, 'device-list': { late: ['1'] } });
+    await a.saveCreds();
+
+    const { rows } = await pool.query("SELECT 1 FROM wadesk_engine.auth_keys WHERE session_id = 'a'");
+    expect(rows).toHaveLength(0);
+  });
+
   it('refuses to load credentials encrypted with a different key', async () => {
     await (await usePostgresAuthState(pool, 'a', cipher)).saveCreds();
     const otherCipher = createCipher(randomBytes(32).toString('base64'));
