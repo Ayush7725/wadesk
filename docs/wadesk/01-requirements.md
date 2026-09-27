@@ -80,6 +80,7 @@ Priority: **M** = must for Step 1, **S** = should (in Step 1 if time allows), **
 | WW-FR-32 | Official WhatsApp channels (Cloud API, 360dialog, Twilio WhatsApp) are only offered to accounts where the platform operator has enabled the `whatsapp_official` feature. Both plan flags gate creating new inboxes only; existing inboxes keep working when a flag is turned off. | M |
 | WW-FR-33 | The platform operator can switch each account's plan (Official, Web, both) and set its daily new-chat limit (SAFE-FR-02) from Super Admin, without the Rails console. | M |
 | WW-FR-34 | The platform operator can switch Chatwoot features on or off per client from an allow-list (channels, conversations, automation, engagement, insights, team). A switched-off feature is hidden from that client's app and its direct link shows "not on your plan"; its data is kept. | M |
+| WW-FR-35 | Everything the platform operator does day to day (clients, users, WhatsApp numbers, system health, installation settings) happens in the operator console with one design; Chatwoot's own admin panel and developer tools are not needed and not linked. | M |
 
 ## 5. Non-functional requirements
 
@@ -125,3 +126,4 @@ Step 1 also delivers the S1 items of [04-safety-requirements.md](04-safety-requi
 | 2026-09-25 | Safety layer: Web is conversations-only, new-chat cap on WW-FR-25, S1 safety items added (§5.1) | CR-001, ADR-0006 |
 | 2026-09-27 | Plan lock for Official WhatsApp (WW-FR-32) and operator screen in Super Admin (WW-FR-33; WW-FR-31 built there) | CR-002, ADR-0008 |
 | 2026-09-27 | Operator console design; per-client feature switches (WW-FR-34) | CR-003, ADR-0009 |
+| 2026-09-27 | One operator console: clients lifecycle, users, system health, settings (WW-FR-35) | CR-004, ADR-0009 amendment |

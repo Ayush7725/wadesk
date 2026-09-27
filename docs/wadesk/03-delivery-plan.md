@@ -128,6 +128,7 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 | Item | Found | Needed by |
 |---|---|---|
 | **Operator screen for per-account settings** — now planned as S2.1 below (CR-002). | M3.5 | Step 2 (before the first paying client) |
+| **Run production without Chatwoot's enterprise code** (`DISABLE_ENTERPRISE=true` or no `enterprise/` in the image), as ADR-0001 assumes. Today `enterprise/` ships in the image; without a Chatwoot licence its daily `ReconcilePlanConfigService` resets all brand settings (name, logos, links) to Chatwoot's and switches premium features off. Until then the console shows branding read-only. Check what else the switch changes before go-live. | S2.3 (#55) | Staging setup, before the first paying client |
 
 ## S2.1 — Operator screen and plan lock (CR-002, ADR-0008)
 
@@ -157,6 +158,20 @@ on the numbers page. *Met in the browser test on 2026-09-27 (PRs #41–#45).*
 **Acceptance:** in the browser, the operator turns off Campaigns and Reports for a test client from its page in the
 console; that client's app no longer shows them and their links say "not on your plan"; turning them back on restores
 them. The console matches the approved mockup in light and dark mode and on a phone-width window.
+
+## S2.3 — One operator console (CR-004, ADR-0009 amendment)
+
+**Status:** in progress. Covers WW-FR-35
+
+| Task | Output |
+|---|---|
+| S2.3a Console navigation: Users, System health, Settings; Chatwoot admin and developer tools unlinked | Request specs (nav, access) |
+| S2.3b Clients lifecycle: new client with first admin, rename, suspend / reactivate, delete | Request specs per flow, incl. invitation email and typed delete confirmation |
+| S2.3c Users: search, memberships, invitation, password, operator access with guards | Request specs incl. last-admin / last-operator / self guards |
+| S2.3d System health (plain words, no secrets) and Settings (allow-listed, validated) | Request specs incl. engine down, job counts, settings reaching where they are used |
+
+**Acceptance:** in the browser, the operator creates a test client with its admin, suspends and reactivates it, adds a
+user to it, checks System health and changes an allowed setting, all without leaving the console's design.
 
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,

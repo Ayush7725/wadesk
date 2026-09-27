@@ -48,6 +48,7 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 | CR-001 | WhatsApp Safety Layer (ADR-0006, 04-safety-requirements) | Approved 2026-09-25 |
 | CR-002 | Plan lock for Official WhatsApp and operator screen in Super Admin (ADR-0008, WW-FR-32/33) | Approved 2026-09-27 |
 | CR-003 | Operator console design and per-client feature switches (ADR-0009, WW-FR-34) | Approved 2026-09-27 |
+| CR-004 | One operator console: clients lifecycle, users, system health, settings; developer tools unlinked (ADR-0009 amendment, WW-FR-35) | Approved 2026-09-27 |
 
 ### Branching and pull requests
 
