@@ -21,7 +21,8 @@ RSpec.describe Wadesk::Safety::OptOutDetector do
       .to eq('Ravi Kumar opted out of marketing messages ("STOP"). You can still reply to their questions.')
   end
 
-  ['Stop!', '  stop 🙏 ', 'UNSUBSCRIBE', 'Opt-out', 'band karo', 'Mat bhejo.', 'मत भेजो', 'बंद कर दो'].each do |text|
+  ['Stop!', '  stop 🙏 ', 'UNSUBSCRIBE', 'Opt-out', 'band karo', 'Mat bhejo.', 'मत भेजो', 'बंद कर दो',
+   'Message band karo', 'मैसेज बंद करो'].each do |text|
     it "recognises #{text.inspect}" do
       detect(incoming(text))
 

@@ -6,7 +6,8 @@ class Wadesk::Safety::OptOutDetector
   DEFAULT_KEYWORDS = [
     'stop', 'stop all', 'stop messages', 'unsubscribe', 'opt out', 'optout', 'no more messages',
     'band karo', 'band kar do', 'bandh karo', 'bandh kar do', 'mat bhejo', 'msg mat bhejo', 'message mat bhejo',
-    'बंद करो', 'बंद कर दो', 'मत भेजो', 'मैसेज मत भेजो'
+    'msg band karo', 'message band karo', 'messages band karo',
+    'बंद करो', 'बंद कर दो', 'मत भेजो', 'मैसेज मत भेजो', 'मैसेज बंद करो', 'मैसेज बंद कर दो'
   ].freeze
 
   pattr_initialize [:message!]
