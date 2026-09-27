@@ -80,6 +80,8 @@ RSpec.describe 'Super Admin WaDesk client lifecycle', type: :request do
         defaults = YAML.safe_load(Rails.root.join('config/features.yml').read).select { |feature| feature['enabled'] }.pluck('name')
         expect(defaults.select { |feature| created.feature_enabled?(feature) }).to eq(defaults)
 
+        # Chatwoot's mailer setup falls back to sendmail when SMTP is not configured (as in CI); capture mails instead.
+        allow(ActionMailer::Base).to receive(:delivery_method).and_return(:test)
         perform_enqueued_jobs
         mail = ActionMailer::Base.deliveries.find { |delivery| delivery.to == ['lakshmi@kaverisweets.in'] }
         body = mail.html_part&.decoded || mail.body.decoded
