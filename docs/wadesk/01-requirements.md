@@ -77,6 +77,8 @@ Priority: **M** = must for Step 1, **S** = should (in Step 1 if time allows), **
 |---|---|---|
 | WW-FR-30 | The WhatsApp Web channel type is only offered to accounts where the platform operator has enabled the `whatsapp_web` feature (plan gating). | M |
 | WW-FR-31 | The platform operator can see all WhatsApp Web sessions and their states in Super Admin. | S |
+| WW-FR-32 | Official WhatsApp channels (Cloud API, 360dialog, Twilio WhatsApp) are only offered to accounts where the platform operator has enabled the `whatsapp_official` feature. Both plan flags gate creating new inboxes only; existing inboxes keep working when a flag is turned off. | M |
+| WW-FR-33 | The platform operator can switch each account's plan (Official, Web, both) and set its daily new-chat limit (SAFE-FR-02) from Super Admin, without the Rails console. | M |
 
 ## 5. Non-functional requirements
 
@@ -120,3 +122,4 @@ Step 1 also delivers the S1 items of [04-safety-requirements.md](04-safety-requi
 |---|---|---|
 | 2026-09-25 | Approved at Gate A | — |
 | 2026-09-25 | Safety layer: Web is conversations-only, new-chat cap on WW-FR-25, S1 safety items added (§5.1) | CR-001, ADR-0006 |
+| 2026-09-27 | Plan lock for Official WhatsApp (WW-FR-32) and operator screen in Super Admin (WW-FR-33; WW-FR-31 built there) | CR-002, ADR-0008 |
