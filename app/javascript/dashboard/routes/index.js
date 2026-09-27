@@ -6,6 +6,10 @@ import store from 'dashboard/store';
 import { validateLoggedInRoutes } from '../helper/routeHelpers';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import AnalyticsHelper from '../helper/AnalyticsHelper';
+import {
+  FEATURE_NOT_ON_PLAN_PATH,
+  findDisabledRouteFeature,
+} from '../helper/featureGate';
 
 const ONBOARDING_STEPS = ['account_details', 'enrichment', 'inbox_setup'];
 const routes = [...dashboard.routes];
@@ -60,7 +64,20 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
   }
 
   const nextRoute = validateLoggedInRoutes(to, store.getters.getCurrentUser);
-  return nextRoute ? next(frontendURL(nextRoute)) : next();
+  if (nextRoute) return next(frontendURL(nextRoute));
+
+  // WaDesk: a feature switched off for this account shows "not on your plan".
+  const disabledFeature = await findDisabledRouteFeature(
+    to,
+    routeAccountId,
+    store
+  );
+  if (disabledFeature) {
+    return next(
+      frontendURL(`accounts/${routeAccountId}/${FEATURE_NOT_ON_PLAN_PATH}`)
+    );
+  }
+  return next();
 };
 
 export const initalizeRouter = () => {

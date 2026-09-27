@@ -100,8 +100,9 @@ export function usePolicy() {
       );
     }
 
-    // default to true
-    return true;
+    // WaDesk: on community installs the account's feature flags decide what
+    // shows, so the operator can switch a feature off per client (was: true).
+    return isFeatureFlagEnabled(flag);
   };
 
   const shouldShowPaywall = featureFlag => {

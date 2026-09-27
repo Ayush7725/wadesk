@@ -12,6 +12,8 @@ import { routes as captainRoutes } from './captain/captain.routes';
 import AppContainer from './Dashboard.vue';
 import Suspended from './suspended/Index.vue';
 import NoAccounts from './noAccounts/Index.vue';
+import NotOnPlan from './notOnPlan/Index.vue';
+import { FEATURE_NOT_ON_PLAN_PATH } from '../../helper/featureGate';
 import OnboardingAccountDetails from './onboarding/Index.vue';
 import OnboardingInboxSetup from './onboarding/InboxSetup.vue';
 
@@ -31,6 +33,15 @@ export default {
         ...searchRoutes,
         ...helpcenterRoutes.routes,
         ...campaignsRoutes.routes,
+        // WaDesk: shown instead of a feature that is off for the account.
+        {
+          path: FEATURE_NOT_ON_PLAN_PATH,
+          name: 'feature_not_on_plan',
+          meta: {
+            permissions: ['administrator', 'agent', 'custom_role'],
+          },
+          component: NotOnPlan,
+        },
       ],
     },
     {
