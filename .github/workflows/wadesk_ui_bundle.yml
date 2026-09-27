@@ -31,4 +31,6 @@ jobs:
         with:
           name: wadesk-ui-bundle
           path: public/vite-dev
+          # The manifest lives in public/vite-dev/.vite, which upload-artifact skips by default.
+          include-hidden-files: true
           retention-days: 14

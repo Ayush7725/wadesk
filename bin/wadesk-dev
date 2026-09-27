@@ -19,7 +19,7 @@ cd "$(dirname "$0")/.."
 
 # Inside a Flatpak sandbox (e.g. VS Code's terminal) there is no container CLI: re-run on the host.
 if ! command -v docker >/dev/null && command -v flatpak-spawn >/dev/null; then
-  exec flatpak-spawn --host "$PWD/bin/wadesk-dev" "$@"
+  exec flatpak-spawn --host ${WADESK_GH_USER:+--env=WADESK_GH_USER="$WADESK_GH_USER"} "$PWD/bin/wadesk-dev" "$@"
 fi
 
 if [ -z "${DOCKER_HOST:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/podman/podman.sock" ]; then
