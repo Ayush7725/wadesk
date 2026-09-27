@@ -1,0 +1,42 @@
+<% content_for(:title) do %>Edit plan: <%= @account.name %><% end %>
+
+<header class="main-content__header" role="banner">
+  <h1 class="main-content__page-title" id="page-title">Edit plan: <%= @account.name %> (ID <%= @account.id %>)</h1>
+  <%= link_to 'Back to clients', super_admin_wadesk_clients_path, class: 'button' %>
+</header>
+
+<section class="main-content__body">
+  <%= form_with scope: :client, url: super_admin_wadesk_client_path(@account), method: :patch, local: true, class: 'max-w-2xl' do |f| %>
+    <h2 class="text-base font-semibold mb-3">Plan</h2>
+    <% SuperAdmin::WadeskClientsController::PLAN_FEATURES.each do |feature, label| %>
+      <% inbox_count = @inbox_counts[feature][@account.id].to_i %>
+      <div class="mb-4">
+        <label class="flex items-center gap-2 text-sm">
+          <%= f.check_box feature, { checked: @account.feature_enabled?(feature) }, '1', '0' %>
+          <span><%= label %></span>
+          <span class="text-xs text-slate-500">(<%= pluralize(inbox_count, 'existing inbox', plural: 'existing inboxes') %>)</span>
+        </label>
+        <% if inbox_count.positive? %>
+          <p class="text-xs text-amber-700 mt-1 ml-6">
+            Turning <%= label %> off keeps these <%= pluralize(inbox_count, 'inbox', plural: 'inboxes') %> working;
+            only new <%= label %> inboxes are blocked.
+          </p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <h2 class="text-base font-semibold mt-6 mb-2">WhatsApp Web daily new-chat limit</h2>
+    <p class="text-xs text-slate-500 mb-2">
+      New chats each WhatsApp Web number of this account may start per day with contacts who never wrote in.
+      Leave blank for the default (<%= Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT %>).
+    </p>
+    <%= f.number_field :daily_new_chats, value: @daily_new_chats, min: SuperAdmin::WadeskClientsController::DAILY_NEW_CHATS_RANGE.min,
+                                         max: SuperAdmin::WadeskClientsController::DAILY_NEW_CHATS_RANGE.max, step: 1,
+                                         placeholder: "#{Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT} (default)",
+                                         class: 'border border-slate-100 p-1.5 rounded-md w-40 text-sm' %>
+
+    <div class="mt-6">
+      <%= f.submit 'Save plan', class: 'button cursor-pointer' %>
+    </div>
+  <% end %>
+</section>
