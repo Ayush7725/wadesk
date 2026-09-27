@@ -211,9 +211,10 @@ RSpec.describe 'Super Admin WaDesk clients', type: :request do
         expect(page.at_css('main a[href="/super_admin/whatsapp_web_numbers"]').text.squish).to eq('All numbers')
         facts = page.at_css('[data-account-facts]')
         expect(facts.css('dt, dd').map { |cell| cell.text.squish }).to eq(
-          ['Official inboxes', '2', 'Agents', '2', 'Created', account.created_at.strftime('%-d %b %Y'), 'Account page', 'Open in Chatwoot admin']
+          ['Status', 'Active', 'Official inboxes', '2', 'Agents', '2', 'Created', account.created_at.strftime('%-d %b %Y')]
         )
-        expect(facts.at_css('a')['href']).to eq("/super_admin/accounts/#{account.id}")
+        # One console (CR-004): no links into Chatwoot's old admin panel.
+        expect(page.css('main a[href^="/super_admin/accounts"]')).to be_empty
       end
 
       it 'says so when a client is suspended and has no WhatsApp Web numbers' do

@@ -1,0 +1,57 @@
+<%# WaDesk: suspend an active client, with Chatwoot's suspension category and a reason. A suspended client is reactivated
+    from the banner at the top of its page. %>
+<% if @account.active? %>
+  <% category_error = @suspension.errors.full_messages_for(:category).first %>
+  <% reason_error = @suspension.errors.full_messages_for(:reason).first %>
+  <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="access-title" data-access>
+    <div class="border-b border-n-weak px-4 py-3.5 sm:px-5">
+      <h2 id="access-title" class="text-sm font-semibold text-n-slate-12">Suspend client</h2>
+    </div>
+    <%= form_with url: suspend_super_admin_wadesk_client_path(@account), method: :post, local: true, scope: :suspension,
+                  class: 'flex flex-col gap-3.5 px-4 py-4 sm:px-5', data: { suspend_form: true } do %>
+      <div id="suspend-effects" class="rounded-lg bg-n-amber-3 px-3 py-2.5 text-xs text-n-amber-11" data-suspend-warning>
+        <p class="font-medium">While suspended:</p>
+        <ul class="mt-1 list-disc ps-4">
+          <li>The client's team can still sign in, but sees only an "Account suspended" page and cannot open conversations.</li>
+          <li>New incoming WhatsApp messages and emails are dropped and not saved, and the website chat widget stops loading. Customers are not told.</li>
+          <li>Nothing is deleted and WhatsApp Web numbers stay linked. Reactivating restores access, but messages that arrived meanwhile are not recovered.</li>
+        </ul>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="suspension_category" class="text-sm font-medium text-n-slate-12">Category</label>
+        <%= select_tag 'suspension[category]',
+                       options_for_select(Account::SUSPENSION_CATEGORIES.map { |category| [Wadesk::ClientSuspension.category_label(category), category] },
+                                          @suspension.category),
+                       include_blank: 'Choose a category', id: 'suspension_category', required: true,
+                       'aria-describedby': ('suspension_category-error' if category_error), 'aria-invalid': (category_error ? true : nil),
+                       class: "block w-full rounded-lg border bg-n-solid-2 px-3 py-2 text-sm text-n-slate-12 focus:outline focus:outline-2 focus:outline-n-brand focus:ring-0 #{category_error ? 'border-n-ruby-9' : 'border-n-weak'}" %>
+        <% if category_error %>
+          <p id="suspension_category-error" class="text-xs text-n-ruby-11" data-field-error><%= category_error %></p>
+        <% end %>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="suspension_reason" class="text-sm font-medium text-n-slate-12">Reason</label>
+        <%= text_area_tag 'suspension[reason]', @suspension.reason, id: 'suspension_reason', rows: 3, required: true,
+                          maxlength: Wadesk::ClientSuspension::REASON_MAX,
+                          'aria-describedby': ['suspension_reason-hint', ('suspension_reason-error' if reason_error)].compact.join(' '),
+                          'aria-invalid': (reason_error ? true : nil),
+                          class: "block w-full rounded-lg border bg-n-solid-2 px-3 py-2 text-sm text-n-slate-12 placeholder:text-n-slate-10 focus:outline focus:outline-2 focus:outline-n-brand focus:ring-0 #{reason_error ? 'border-n-ruby-9' : 'border-n-weak'}" %>
+        <p id="suspension_reason-hint" class="text-xs text-n-slate-11">
+          For your records; the client does not see it. Up to <%= Wadesk::ClientSuspension::REASON_MAX %> characters.
+        </p>
+        <% if reason_error %>
+          <p id="suspension_reason-error" class="text-xs text-n-ruby-11" data-field-error><%= reason_error %></p>
+        <% end %>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" aria-describedby="suspend-effects"
+                class="cursor-pointer rounded-lg border border-n-amber-9 bg-n-amber-3 px-3 py-1.5 text-sm font-medium text-n-amber-11 hover:bg-n-amber-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-amber-9">
+          Suspend client
+        </button>
+      </div>
+    <% end %>
+  </section>
+<% end %>

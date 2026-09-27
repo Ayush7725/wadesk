@@ -1,0 +1,20 @@
+<%# WaDesk: a labelled text input of the Clients pages, with an optional hint and an error tied to it.
+    Locals: name, id, label, value; optional type (default text), hint, error, autocomplete, required, maxlength, minlength, extra (Hash). %>
+<% error = local_assigns[:error].presence %>
+<% hint = local_assigns[:hint].presence %>
+<% described_by = [("#{id}-hint" if hint), ("#{id}-error" if error)].compact.join(' ').presence %>
+<div class="flex min-w-0 flex-col gap-1.5" data-field="<%= id %>">
+  <label for="<%= id %>" class="text-sm font-medium text-n-slate-12"><%= label %></label>
+  <%= tag.input type: local_assigns.fetch(:type, 'text'), name: name, id: id, value: value,
+                autocomplete: local_assigns[:autocomplete], required: local_assigns[:required],
+                maxlength: local_assigns[:maxlength], minlength: local_assigns[:minlength],
+                'aria-describedby': described_by, 'aria-invalid': (error ? true : nil),
+                class: "block w-full min-w-0 rounded-lg border bg-n-solid-2 px-3 py-2 text-sm text-n-slate-12 placeholder:text-n-slate-10 focus:outline focus:outline-2 focus:outline-n-brand focus:ring-0 #{error ? 'border-n-ruby-9' : 'border-n-weak'}",
+                **local_assigns.fetch(:extra, {}) %>
+  <% if hint %>
+    <p id="<%= id %>-hint" class="text-xs text-n-slate-11"><%= hint %></p>
+  <% end %>
+  <% if error %>
+    <p id="<%= id %>-error" class="text-xs text-n-ruby-11" data-field-error><%= error %></p>
+  <% end %>
+</div>

@@ -2,12 +2,36 @@
 <% default_limit = Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT %>
 <% limit_range = SuperAdmin::WadeskClientsController::DAILY_NEW_CHATS_RANGE %>
 <% plan_descriptions = { 'whatsapp_official' => 'Meta Cloud API, 360dialog, Twilio', 'whatsapp_web' => 'Phone linked by QR code or pairing code' } %>
+<% secondary_button = 'cursor-pointer rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+<% danger_button = 'cursor-pointer rounded-lg border border-n-ruby-9 bg-n-ruby-9 px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-ruby-9' %>
+<% latest_suspension = @account.suspension_history.last if @account.suspended? %>
 
 <%= render 'super_admin/wadesk_console/page_header',
            title: @account.name,
            description: "##{@account.id} · client since #{@account.created_at.strftime('%-d %b %Y')}",
            back_path: super_admin_wadesk_clients_path, back_label: 'Clients',
            actions: (@account.active? ? console_pill('Active', :ok) : console_pill('Suspended', :mute)) %>
+
+<% if @account.suspended? %>
+  <section class="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-n-amber-6 bg-n-amber-3 px-4 py-3.5 sm:px-5"
+           aria-labelledby="suspended-title" data-suspended-banner>
+    <div class="min-w-0 text-sm text-n-amber-11">
+      <h2 id="suspended-title" class="font-semibold">This client is suspended</h2>
+      <% if latest_suspension %>
+        <p class="mt-0.5">
+          <%= Wadesk::ClientSuspension.category_label(latest_suspension['category']) %>
+          · since <%= Time.zone.parse(latest_suspension['suspended_at']).strftime('%-d %b %Y') %>
+          <% suspended_by = User.find_by(id: latest_suspension['suspended_by']) %>
+          <%= "· by #{suspended_by.name}" if suspended_by %>
+        </p>
+        <p class="mt-1 break-words" data-suspension-reason>Reason: <%= latest_suspension['reason'] %></p>
+      <% end %>
+      <p class="mt-1">Its team sees an "Account suspended" page and new incoming messages are not saved.</p>
+    </div>
+    <%= button_to 'Reactivate client', reactivate_super_admin_wadesk_client_path(@account), method: :post, form: { class: 'flex-none' },
+                                                                                             class: secondary_button %>
+  </section>
+<% end %>
 
 <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
   <%= form_with scope: :client, url: super_admin_wadesk_client_path(@account), method: :patch, local: true,
@@ -123,19 +147,31 @@
       <div class="border-b border-n-weak px-4 py-3.5 sm:px-5">
         <h2 id="account-title" class="text-sm font-semibold text-n-slate-12">Account</h2>
       </div>
+      <%= form_with url: rename_super_admin_wadesk_client_path(@account), method: :patch, local: true, scope: :client,
+                    class: 'flex flex-wrap items-end gap-2.5 border-b border-n-weak px-4 py-4 sm:px-5', data: { rename_form: true } do %>
+        <div class="min-w-0 flex-[1_1_12rem]">
+          <%= render 'text_field', name: 'client[name]', id: 'rename_name', label: 'Client name', value: @new_name || @account.name,
+                                  required: true, autocomplete: 'organization', error: @form_error[:rename] %>
+        </div>
+        <button type="submit" class="<%= secondary_button %>">Rename</button>
+      <% end %>
       <dl class="grid grid-cols-1 gap-x-3 gap-y-2 px-4 py-4 text-sm sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5" data-account-facts>
+        <dt class="text-n-slate-10">Status</dt>
+        <dd><%= @account.active? ? 'Active' : 'Suspended' %></dd>
         <dt class="text-n-slate-10">Official inboxes</dt>
         <dd class="tabular-nums"><%= @inbox_counts['whatsapp_official'][@account.id].to_i %></dd>
         <dt class="text-n-slate-10">Agents</dt>
         <dd class="tabular-nums"><%= @agents_count %></dd>
         <dt class="text-n-slate-10">Created</dt>
         <dd><%= @account.created_at.strftime('%-d %b %Y') %></dd>
-        <dt class="text-n-slate-10">Account page</dt>
-        <dd><%= link_to 'Open in Chatwoot admin', super_admin_account_path(@account), class: 'font-medium text-n-blue-11 hover:underline' %></dd>
       </dl>
     </section>
+
+    <%= render 'access' %>
   </div>
 </div>
+
+<%= render 'danger_zone', danger_button: danger_button %>
 
 <script>
   // Optional helpers; the form works without them. −/+ and "Use default" for the limit, and an unsaved-changes note.
