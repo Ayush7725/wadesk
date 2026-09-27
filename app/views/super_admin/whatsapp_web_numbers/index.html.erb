@@ -10,7 +10,8 @@
   <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-n-weak px-3.5 py-3">
     <%= form_with url: super_admin_whatsapp_web_numbers_path, method: :get, local: true, role: 'search',
                   class: 'flex min-w-0 max-w-sm flex-[1_1_14rem] items-center gap-2' do |f| %>
-      <%= f.hidden_field :filter, value: @filter %>
+      <%# A search looks through all numbers; the filters then narrow the results. %>
+      <%= f.hidden_field :filter, value: 'all' %>
       <%= f.label :search, 'Search numbers', class: 'sr-only' %>
       <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-n-weak bg-n-alpha-2 px-2.5 py-1.5 focus-within:outline focus-within:outline-2 focus-within:outline-n-brand">
         <svg class="size-4 flex-none text-n-slate-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>

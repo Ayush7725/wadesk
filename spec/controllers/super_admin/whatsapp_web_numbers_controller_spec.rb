@@ -92,11 +92,12 @@ RSpec.describe 'Super Admin WhatsApp Web numbers', type: :request do
         expect(inboxes).to eq(['Shop Co Shop Sales'])
       end
 
-      it 'finds numbers by part of the client or inbox name, within the chosen filter' do
+      it 'finds numbers by part of the client or inbox name, and a new search looks through all numbers' do
         get '/super_admin/whatsapp_web_numbers', params: { search: 'clinic' }
         expect(inboxes).to eq(['Clinic Co Clinic Front Desk', 'Clinic Co Clinic Billing'])
         expect(html.at_css('input[type="search"][name="search"]')['value']).to eq('clinic')
-        expect(html.at_css('input[type="hidden"][name="filter"]')['value']).to eq('attention')
+        # The search box submits across all numbers, so a connected number is found too (browser test, 2026-09-27).
+        expect(html.at_css('input[type="hidden"][name="filter"]')['value']).to eq('all')
 
         get '/super_admin/whatsapp_web_numbers', params: { filter: 'all', search: 'SALES' }
         expect(inboxes).to eq(['Shop Co Shop Sales'])

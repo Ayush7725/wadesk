@@ -37,7 +37,7 @@ module SuperAdmin::WadeskConsoleHelper
   def console_nav_links
     [
       { label: 'Overview', url: super_admin_root_path, icon: 'icon-grid-line', active: controller_name == 'wadesk_overview' },
-      { label: 'Clients', url: super_admin_wadesk_clients_path, icon: 'icon-chat-smile-3-line', active: controller_name == 'wadesk_clients' },
+      { label: 'Clients', url: super_admin_wadesk_clients_path, icon: 'icon-building-4-line', active: controller_name == 'wadesk_clients' },
       { label: 'WhatsApp numbers', url: super_admin_whatsapp_web_numbers_path, icon: 'icon-whatsapp-line',
         active: controller_name == 'whatsapp_web_numbers', badge: numbers_needing_attention_count }
     ]
