@@ -1,82 +1,56 @@
-<%# WaDesk: WhatsApp Web numbers of every client account and their connection state (WW-FR-31). %>
-<% content_for(:title) do %>WhatsApp Web Numbers<% end %>
+<%# WaDesk: WhatsApp Web numbers of every client and their connection state (WW-FR-31, ADR-0008). %>
+<% content_for(:title) { 'WhatsApp numbers' } %>
+<% focus_ring = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand' %>
 
-<header class="main-content__header" role="banner">
-  <h1 class="main-content__page-title" id="page-title">WhatsApp Web Numbers</h1>
-</header>
+<%= render 'super_admin/wadesk_console/page_header',
+           title: 'WhatsApp numbers',
+           description: 'Every WhatsApp Web number of every client, as last reported by the WhatsApp engine. Numbers that need attention come first.' %>
 
-<section class="main-content__body">
-  <p class="text-sm text-slate-600 mb-4">
-    State as last reported by the WhatsApp engine. Numbers that are not connected are listed first.
-  </p>
-
-  <div class="flex gap-4 mb-6 text-sm">
-    <div class="border border-slate-100 rounded-md px-4 py-2">Total <strong class="ml-1"><%= @summary[:total] %></strong></div>
-    <div class="border border-slate-100 rounded-md px-4 py-2">Connected <strong class="ml-1 text-green-700"><%= @summary[:connected] %></strong></div>
-    <div class="border border-slate-100 rounded-md px-4 py-2">
-      Needs attention <strong class="ml-1 text-red-600"><%= @summary[:total] - @summary[:connected] %></strong>
-    </div>
-  </div>
-
-  <div class="flex gap-2 mb-4 text-sm">
-    <% { 'all' => 'All', 'attention' => 'Needs attention', 'connected' => 'Connected' }.each do |filter, label| %>
-      <% active = @filter == filter %>
-      <%= link_to label, super_admin_whatsapp_web_numbers_path(filter: filter),
-                  class: "px-3 py-1.5 rounded-md border #{active ? 'border-woot-500 text-woot-500' : 'border-slate-200 text-slate-800'}" %>
+<section class="rounded-xl border border-n-weak bg-n-solid-1" aria-label="WhatsApp Web numbers">
+  <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-n-weak px-3.5 py-3">
+    <%= form_with url: super_admin_whatsapp_web_numbers_path, method: :get, local: true, role: 'search',
+                  class: 'flex min-w-0 max-w-sm flex-[1_1_14rem] items-center gap-2' do |f| %>
+      <%= f.hidden_field :filter, value: @filter %>
+      <%= f.label :search, 'Search numbers', class: 'sr-only' %>
+      <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-n-weak bg-n-alpha-2 px-2.5 py-1.5 focus-within:outline focus-within:outline-2 focus-within:outline-n-brand">
+        <svg class="size-4 flex-none text-n-slate-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <%= f.search_field :search, value: @search, placeholder: 'Search number, client or inbox',
+                                    class: 'w-full min-w-0 border-0 bg-transparent p-0 text-sm text-n-slate-12 outline-none placeholder:text-n-slate-10 focus:ring-0' %>
+      </div>
+      <%= f.submit 'Search', name: nil, class: "cursor-pointer rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 text-sm font-medium hover:bg-n-alpha-2 #{focus_ring}" %>
     <% end %>
+
+    <nav class="flex flex-wrap gap-0.5 rounded-lg border border-n-weak bg-n-alpha-2 p-0.5" aria-label="Filter numbers">
+      <% SuperAdmin::WhatsappWebNumbersController::FILTERS.each do |filter, label| %>
+        <% active = @filter == filter %>
+        <%= link_to super_admin_whatsapp_web_numbers_path(filter: filter, search: @search.presence),
+                    class: "rounded-md px-2.5 py-1 text-sm font-medium #{focus_ring} " \
+                           "#{active ? 'bg-n-solid-1 text-n-slate-12 shadow-sm' : 'text-n-slate-11 hover:text-n-slate-12'}",
+                    'aria-current': (active ? 'true' : nil), data: { filter: filter } do %>
+          <%= label %> <span class="tabular-nums text-n-slate-10"><%= @counts[filter] %></span>
+        <% end %>
+      <% end %>
+    </nav>
   </div>
 
   <% if @numbers.empty? %>
-    <p class="text-sm text-slate-600">No WhatsApp Web numbers.</p>
-  <% else %>
-    <table class="w-full text-sm border border-slate-100 rounded-md">
-      <thead class="text-left text-xs text-slate-500 bg-slate-25">
-        <tr>
-          <th class="px-3 py-2">Account</th>
-          <th class="px-3 py-2">Inbox</th>
-          <th class="px-3 py-2">Number</th>
-          <th class="px-3 py-2">State</th>
-          <th class="px-3 py-2">Reason</th>
-          <th class="px-3 py-2">Last change</th>
-          <th class="px-3 py-2">Link method</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @numbers.each do |channel| %>
-          <% config = channel.provider_config %>
-          <% state = config['connection_state'] %>
-          <% changed_at = config['connection_updated_at'].presence && Time.zone.parse(config['connection_updated_at']) %>
-          <tr class="border-t border-slate-100 align-top">
-            <td class="px-3 py-2">
-              <%= link_to "##{channel.account.id} #{channel.account.name}", super_admin_account_path(channel.account), class: 'text-woot-500' %>
-            </td>
-            <td class="px-3 py-2"><%= channel.inbox.name %></td>
-            <td class="px-3 py-2 whitespace-nowrap">
-              <%= channel.phone_number %>
-              <%# The engine reports the linked phone as digits only; the inbox number has a leading +. %>
-              <% if config['connected_phone'].present? && config['connected_phone'] != channel.phone_number.delete('+') %>
-                <div class="text-xs text-slate-500">Linked phone: +<%= config['connected_phone'] %></div>
-              <% end %>
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-              <span class="<%= state == 'connected' ? 'text-green-700' : 'text-red-600' %> font-medium"><%= state_label(state) %></span>
-              <% if channel.reauthorization_required? %>
-                <div class="mt-1 w-fit rounded bg-red-100 px-1.5 text-xs text-red-700">Needs re-link</div>
-              <% end %>
-            </td>
-            <td class="px-3 py-2"><%= reason_label(config['connection_reason']) if config['connection_reason'].present? %></td>
-            <td class="px-3 py-2 whitespace-nowrap">
-              <% if changed_at %>
-                <span title="<%= changed_at.utc.strftime('%Y-%m-%d %H:%M:%S UTC') %>"><%= time_ago_in_words(changed_at) %> ago</span>
-              <% else %>
-                <span class="text-slate-400">—</span>
-              <% end %>
-            </td>
-            <td class="px-3 py-2"><%= config['link_method'] == 'code' ? 'Phone number code' : 'QR code' %></td>
-          </tr>
+    <div class="px-6 py-8 text-center text-sm text-n-slate-11" data-empty="numbers">
+      <% if @search.present? %>
+        <p>No number matches “<%= @search %>”<%= " in #{SuperAdmin::WhatsappWebNumbersController::FILTERS[@filter]}" unless @filter == 'all' %>.</p>
+        <% unless @filter == 'all' %>
+          <%= link_to 'Search all numbers', super_admin_whatsapp_web_numbers_path(filter: 'all', search: @search),
+                      class: "mt-1 inline-block rounded font-medium text-n-blue-11 hover:underline #{focus_ring}" %>
         <% end %>
-      </tbody>
-    </table>
-    <%= paginate @numbers %>
+      <% elsif @filter == 'attention' %>
+        <p>Nothing here. Every number is connected.</p>
+      <% elsif @filter == 'connected' %>
+        <p>No number is connected right now.</p>
+      <% else %>
+        <p>No client has a WhatsApp Web number yet.</p>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render 'table', numbers: @numbers %>
+    <%= render 'pagination', numbers: @numbers, filter: @filter, search: @search %>
   <% end %>
 </section>

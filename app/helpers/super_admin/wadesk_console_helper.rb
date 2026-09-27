@@ -51,4 +51,12 @@ module SuperAdmin::WadeskConsoleHelper
       { label: 'Background jobs', url: sidekiq_web_path, icon: 'icon-mist-fill', active: false }
     ]
   end
+
+  # What happened to a number, in plain words; falls back to what its state means when the engine gave no reason.
+  def whatsapp_web_reason(channel)
+    whatsapp_web_state(channel)[:reason] || {
+      nil => 'Nobody has linked a phone yet', 'qr_pending' => 'Waiting for the phone to scan the code',
+      'connecting' => 'Connecting to WhatsApp', 'disconnected' => 'Connection dropped; reconnecting on its own'
+    }[channel.provider_config['connection_state']]
+  end
 end

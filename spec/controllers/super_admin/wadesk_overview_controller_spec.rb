@@ -54,4 +54,114 @@ RSpec.describe 'Super Admin WaDesk console', type: :request do
       expect(console_links).to include('WaDesk console')
     end
   end
+
+  context 'with several clients on different plans' do
+    let(:shop) { create(:account, name: 'Shop Co') }
+    let(:clinic) { create(:account, name: 'Clinic Co') }
+    let(:jewels) { create(:account, name: 'Jewels Co') }
+    let(:coaching) { create(:account, name: 'Coaching Co') }
+    let(:nimbus) { create(:account, name: 'Nimbus Co', status: :suspended) }
+    let(:plans) do
+      { shop => %w[whatsapp_web whatsapp_official], clinic => %w[whatsapp_web], coaching => %w[whatsapp_web], jewels => %w[whatsapp_official],
+        nimbus => [] }
+    end
+    let(:html) { Nokogiri::HTML(response.body) }
+    let(:attention_rows) { html.css('[data-section="attention"] li').map { |row| row.text.squish } }
+
+    def create_number(account, inbox_name, phone, update)
+      channel = create(:channel_whatsapp, account: account, provider: 'baileys', phone_number: phone, provider_config: {}, sync_templates: false)
+      channel.inbox.update!(name: inbox_name)
+      WhatsappWeb::ConnectionUpdateService.new(channel: channel, payload: update).perform if update
+    end
+
+    def count_queries
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { get '/super_admin' }
+      queries
+    end
+
+    before do
+      Account.where.not(id: plans.keys).delete_all # the counts cover every account; keep only this example's clients
+      plans.each do |account, features|
+        account.disable_features('whatsapp_web', 'whatsapp_official')
+        account.enable_features!(*features)
+      end
+      create_number(shop, 'Shop Sales', '+911111111111', { 'state' => 'connected', 'me' => { 'phone' => '911111111111' } })
+      create_number(shop, 'Shop Support', '+912222222222', { 'state' => 'logged_out', 'reason' => 'unlinked_from_phone' })
+      create_number(clinic, 'Clinic Front Desk', '+913333333333', nil)
+      create_number(clinic, 'Clinic Billing', '+914444444444',
+                    { 'state' => 'failed', 'reason' => 'number_mismatch', 'me' => { 'phone' => '919999999999' } })
+      cloud = create(:channel_whatsapp, account: jewels, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+      cloud.inbox.update!(name: 'Jewels Cloud API')
+      sign_in(super_admin, scope: :super_admin)
+    end
+
+    it 'summarises clients and their WhatsApp Web numbers, leaving WhatsApp Cloud inboxes out' do
+      get '/super_admin'
+
+      cards = html.css('[data-summary]').to_h { |card| [card['data-summary'], card.text.squish] }
+      expect(cards).to eq(
+        'clients' => 'Active clients 4 1 suspended',
+        'numbers' => 'WhatsApp Web numbers 4 across 2 clients',
+        'connected' => 'Connected 1 / 4 1 of 4',
+        'attention' => 'Need attention 3 logged out, failed or waiting'
+      )
+      expect(html.at_css('[data-summary="connected"] progress').attributes.transform_values(&:value)).to include('value' => '1', 'max' => '4')
+      expect(html.at_css('[data-summary="attention"] strong')['class']).to include('text-n-ruby-11')
+    end
+
+    it 'lists the numbers that need attention in plain words, each linking to its client' do
+      get '/super_admin'
+
+      expect(attention_rows).to eq([
+                                     'Shop Co · Shop Support +912222222222 Removed from the phone\'s Linked devices Logged out',
+                                     'Clinic Co · Clinic Front Desk +913333333333 Nobody has linked a phone yet Never linked',
+                                     'Clinic Co · Clinic Billing +914444444444 A phone with a different number was linked Could not link'
+                                   ])
+      links = html.css('[data-section="attention"] li a').map { |link| link['href'] }
+      expect(links).to eq(["/super_admin/wadesk_clients/#{shop.id}/edit", "/super_admin/wadesk_clients/#{clinic.id}/edit",
+                           "/super_admin/wadesk_clients/#{clinic.id}/edit"])
+      expect(html.at_css('[data-section="attention"] a[href="/super_admin/whatsapp_web_numbers"]').text).to eq('See all numbers')
+      expect(response.body).not_to include('Shop Sales', 'Jewels Cloud API')
+    end
+
+    it 'shows the first few numbers needing attention and links to the rest' do
+      9.times { |i| create_number(clinic, "Clinic #{i}", "+91555555555#{i}", { 'state' => 'logged_out', 'reason' => 'forbidden' }) }
+
+      get '/super_admin'
+
+      expect(attention_rows.size).to eq(8)
+      more = html.at_css('[data-section="attention"] a[href="/super_admin/whatsapp_web_numbers?filter=attention"]')
+      expect(more.text).to eq('See all 12 numbers that need attention')
+    end
+
+    it 'counts clients on each plan and links to Clients' do
+      get '/super_admin'
+
+      plan_rows = html.css('[data-section="plans"] [data-plan]').map { |row| row.text.squish }
+      expect(plan_rows).to eq(['Both 1', 'Web only 2', 'Official only 1', 'No WhatsApp 1'])
+      expect(html.at_css('[data-section="plans"] a[href="/super_admin/wadesk_clients"]').text).to eq('Manage clients')
+    end
+
+    it 'says all is well when every number is connected' do
+      Channel::Whatsapp.whatsapp_web_needing_attention.find_each do |channel|
+        channel.update_column(:provider_config, channel.provider_config.merge('connection_state' => 'connected')) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      get '/super_admin'
+
+      expect(html.css('[data-section="attention"] li')).to be_empty
+      expect(html.at_css('[data-empty="attention"]').text.squish).to eq('All good. Every WhatsApp Web number is connected.')
+    end
+
+    it 'runs the same queries however many clients and numbers there are' do
+      count_queries # warms up one-off lookups
+      queries = count_queries
+      other = create(:account, name: 'Other Co').tap { |a| a.enable_features!('whatsapp_web') }
+      3.times { |i| create_number(other, "Other #{i}", "+91666666666#{i}", nil) }
+
+      expect(count_queries.size).to eq(queries.size)
+    end
+  end
 end

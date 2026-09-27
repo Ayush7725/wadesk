@@ -1,0 +1,32 @@
+<%# WaDesk: how many clients are on each WhatsApp plan. Locals: plans ([[label, count], ...]). %>
+<% bar_tones = {
+     'Both' => '[&::-webkit-progress-value]:bg-n-blue-9 [&::-moz-progress-bar]:bg-n-blue-9',
+     'Web only' => '[&::-webkit-progress-value]:bg-n-teal-9 [&::-moz-progress-bar]:bg-n-teal-9',
+     'Official only' => '[&::-webkit-progress-value]:bg-n-blue-11 [&::-moz-progress-bar]:bg-n-blue-11',
+     'No WhatsApp' => '[&::-webkit-progress-value]:bg-n-slate-8 [&::-moz-progress-bar]:bg-n-slate-8'
+   } %>
+<% max = [plans.map(&:last).max.to_i, 1].max %>
+<section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="plans-title" data-section="plans">
+  <div class="flex items-center justify-between gap-3 border-b border-n-weak px-4 py-3.5">
+    <h2 class="text-sm font-semibold" id="plans-title">Plans</h2>
+    <%= link_to 'Manage clients', super_admin_wadesk_clients_path,
+                class: 'rounded text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+  </div>
+  <div class="flex flex-col gap-3.5 px-4 py-4">
+    <dl class="flex flex-col gap-3.5">
+      <% plans.each do |label, count| %>
+        <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-2.5" data-plan="<%= label %>">
+          <dt class="text-sm text-n-slate-11"><%= label %></dt>
+          <dd class="flex items-center gap-2.5">
+            <progress class="h-2 w-full appearance-none overflow-hidden rounded-full bg-n-alpha-2 [&::-webkit-progress-bar]:bg-n-alpha-2 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:rounded-full <%= bar_tones.fetch(label) %>"
+                      value="<%= count %>" max="<%= max %>" aria-hidden="true"></progress>
+            <b class="w-8 flex-none text-end text-sm font-semibold tabular-nums"><%= count %></b>
+          </dd>
+        </div>
+      <% end %>
+    </dl>
+    <p class="text-xs text-n-slate-10">
+      Official is the Meta Cloud API (also 360dialog and Twilio). Web is a phone linked by QR code or pairing code.
+    </p>
+  </div>
+</section>
