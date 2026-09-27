@@ -158,6 +158,20 @@ on the numbers page. *Met in the browser test on 2026-09-27 (PRs #41–#45).*
 console; that client's app no longer shows them and their links say "not on your plan"; turning them back on restores
 them. The console matches the approved mockup in light and dark mode and on a phone-width window.
 
+## S2.3 — One operator console (CR-004, ADR-0009 amendment)
+
+**Status:** in progress. Covers WW-FR-35
+
+| Task | Output |
+|---|---|
+| S2.3a Console navigation: Users, System health, Settings; Chatwoot admin and developer tools unlinked | Request specs (nav, access) |
+| S2.3b Clients lifecycle: new client with first admin, rename, suspend / reactivate, delete | Request specs per flow, incl. invitation email and typed delete confirmation |
+| S2.3c Users: search, memberships, invitation, password, operator access with guards | Request specs incl. last-admin / last-operator / self guards |
+| S2.3d System health (plain words, no secrets) and Settings (allow-listed, validated) | Request specs incl. engine down, job counts, settings reaching where they are used |
+
+**Acceptance:** in the browser, the operator creates a test client with its admin, suspends and reactivates it, adds a
+user to it, checks System health and changes an allowed setting, all without leaving the console's design.
+
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
 opt-in capture, campaign audience filtering and review, campaign permission, audit log — [04-safety-requirements.md](04-safety-requirements.md)).

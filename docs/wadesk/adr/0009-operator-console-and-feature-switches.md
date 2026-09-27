@@ -25,6 +25,18 @@ enterprise edition, which WaDesk does not use.
 4. Existing accounts get the default-on flags switched on before the dashboard starts honouring them, so no client
    loses a menu on upgrade.
 
+## Amendment (CR-004, 2026-09-27)
+After the browser test the product owner asked for **one console with one look**: nothing an operator does should
+open Chatwoot's old admin panel. The console therefore also covers:
+- **Clients** lifecycle: create a client with its first admin, rename, suspend / reactivate with a reason, delete with
+  a typed confirmation (reusing Chatwoot's account creation, suspension and deletion);
+- **Users**: search users, see their clients and roles, add to / remove from a client, resend the invitation, set a
+  password, grant or remove operator (super admin) access;
+- **System health** in plain words (app, database, Redis, WhatsApp engine, email, background jobs summary);
+- **Settings**: an allow-list of installation settings that are safe to change.
+Developer tools (Sidekiq, platform apps, agent bots, push diagnostics, raw installation configs) and Chatwoot's
+dashboard are no longer linked from the console; they stay reachable by URL for developers.
+
 ## Consequences
 - The operator shapes each client's app without the Rails console.
 - API-level locking is a known gap, acceptable for decluttering; required before selling features separately.
