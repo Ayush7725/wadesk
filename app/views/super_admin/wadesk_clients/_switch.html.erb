@@ -1,0 +1,17 @@
+<%# WaDesk: an on/off switch that works without JavaScript (a styled checkbox; the hidden field sends "0" when off).
+    Locals: name, id, checked, label, description; optional warning (shown only while the switch is off), card (bool). %>
+<% warning = local_assigns[:warning] %>
+<div class="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 <%= local_assigns[:card] ? 'rounded-lg border border-n-weak bg-n-solid-2 px-4 py-3.5' : 'py-3' %>"
+     data-switch="<%= id %>">
+  <%= hidden_field_tag name, '0', id: nil %>
+  <%= check_box_tag name, '1', checked, id: id, role: 'switch', class: 'peer sr-only', 'aria-describedby': "#{id}-description" %>
+  <label for="<%= id %>" class="col-start-1 row-start-1 cursor-pointer text-sm font-medium text-n-slate-12"><%= label %></label>
+  <p id="<%= id %>-description" class="col-start-1 row-start-2 text-xs text-n-slate-11"><%= description %></p>
+  <label for="<%= id %>" aria-hidden="true"
+         class="relative col-start-2 row-span-2 row-start-1 h-[22px] w-10 cursor-pointer rounded-full bg-n-slate-6 transition-colors after:absolute after:start-[3px] after:top-[3px] after:size-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-n-brand peer-checked:after:translate-x-[18px] rtl:peer-checked:after:-translate-x-[18px] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-n-brand motion-reduce:transition-none motion-reduce:after:transition-none"></label>
+  <% if warning %>
+    <p class="col-span-2 mt-1.5 hidden rounded-lg bg-n-amber-3 px-2.5 py-2 text-xs text-n-amber-11 peer-[:not(:checked)]:block" data-off-warning>
+      <%= warning %>
+    </p>
+  <% end %>
+</div>
