@@ -12,7 +12,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [02-architecture.md](02-architecture.md) | How it is built: components, contracts, data flows | Approved 2026-09-25 |
 | [03-delivery-plan.md](03-delivery-plan.md) | Milestones, tasks, acceptance criteria, test strategy | Approved 2026-09-25 |
 | [04-safety-requirements.md](04-safety-requirements.md) | WhatsApp Safety Layer requirements and phasing | Approved 2026-09-25 (CR-001) |
-| [acceptance/](acceptance/) | Milestone acceptance records (Gate B) | M1 |
+| [acceptance/](acceptance/) | Milestone acceptance records (Gate B) | M1, M2–M4 (proposed) |
 | [adr/](adr/) | Architecture Decision Records — one file per significant decision | See index below |
 
 ### ADR index
@@ -62,6 +62,18 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 3. No secrets, credentials or personal data in code, logs or fixtures.
 4. Docs/ADRs updated if behaviour or design changed.
 5. PR reviewed and merged to `main`; requirement IDs ticked in the delivery plan.
+6. The user journey is checked, not just the unit (rules from the
+   [2026-09-27 device test](acceptance/M2-M4.md#bugs-found-root-cause-and-the-rule-that-prevents-the-class)):
+   - **Test the entry point.** For anything user-facing, a test mounts the real parent page, route or tab the user
+     opens it from, not only the component itself.
+   - **Follow reused behaviour to what the user sees.** When reusing a Chatwoot mechanism (flags, notifications,
+     jobs), check every place it is exposed (API JSON, sidebar, emails) and test the output for our channel.
+   - **Realistic inputs.** Test data includes what real Indian customers and staff type (Hindi, Hinglish, typos,
+     emoji) and real payloads (recorded fixtures), not just textbook examples.
+   - **Test every transition.** For state machines (sessions, linking, sending), cover cancel, replace, expire and
+     retry paths, and assert that after a cleanup nothing comes back.
+   - **Run-mode smoke check.** Before a demo, run the same mode the demo uses and confirm the pieces reach each
+     other (engine → Chatwoot webhooks, Chatwoot → engine) before handing over.
 
 ### Fork hygiene (keep upstream merges cheap)
 

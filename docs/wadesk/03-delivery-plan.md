@@ -23,7 +23,7 @@ Goal: a working, repeatable engineering setup before any feature code.
 
 ### M1 — Engine: session lifecycle ✅
 
-**Status:** accepted 2026-09-25 ([record](acceptance/M1.md)); wrong-number check deferred to M2 acceptance.
+**Status:** accepted 2026-09-25 ([record](acceptance/M1.md)); the deferred wrong-number check passed on real phones on 2026-09-27 ([record](acceptance/M2-M4.md)).
 Covers WW-FR-02, 03, 04, 05, 06, 07, 08 · WW-NFR-01, 02, 05, 06, 07
 
 | Task | Output |
@@ -40,7 +40,7 @@ engine restart restores the session without a new QR; unlinking from the phone p
 
 ### M2 — Incoming messages into Chatwoot
 
-**Status:** built (PRs #12–#16); acceptance pending (real second WhatsApp number needed), together with M1's deferred wrong-number check.
+**Status:** built (PRs #12–#16); verified on real phones 2026-09-27 ([record](acceptance/M2-M4.md)), acceptance awaiting approval.
 Covers WW-FR-01 (backend), 10, 11, 12, 13, 14, 15, 17, 30 (backend)
 
 | Task | Output |
@@ -57,7 +57,7 @@ under the right contact, in a WhatsApp inbox; group messages do not appear; all 
 
 ### M3 — Outgoing messages and status
 
-**Status:** built (PRs #17–#23, incl. safety items M3.5–M3.7 and a security fix keeping Signal keys out of logs); acceptance pending.
+**Status:** built (PRs #17–#23, incl. safety items M3.5–M3.7 and a security fix keeping Signal keys out of logs); verified on real phones 2026-09-27 ([record](acceptance/M2-M4.md)), acceptance awaiting approval.
 Covers WW-FR-20, 21, 22, 23, 24, 25
 
 | Task | Output |
@@ -75,7 +75,7 @@ sent → delivered → read; sending while disconnected shows a clear failure; r
 
 ### M4 — Admin UI
 
-**Status:** built (PRs #24, #25); not yet seen in a browser — the laptop cannot compile the frontend, so the UI is tested with the GitHub-built bundle (`bin/wadesk-dev ui-bundle` + `server-prebuilt`, PR #26).
+**Status:** built (PRs #24, #25); tested in the browser with the GitHub-built bundle on 2026-09-27, fixes #30–#35 ([record](acceptance/M2-M4.md)); acceptance awaiting approval.
 Covers WW-FR-01, 02, 03, 05, 06, 08 (UI), 30 (UI), WW-NFR-10
 
 | Task | Output |
