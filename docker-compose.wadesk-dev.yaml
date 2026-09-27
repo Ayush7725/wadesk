@@ -57,6 +57,10 @@ services:
       VITE_RUBY_AUTO_BUILD: 'false'
     command: sh -c 'rm -f tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0 -p 3000'
     ports: ['127.0.0.1:3300:3000']
+    # The engine and Chatwoot's env address Rails as "web" in both profiles.
+    networks:
+      default:
+        aliases: [web]
 
   worker:
     <<: *toolbox
