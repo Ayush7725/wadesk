@@ -112,11 +112,15 @@ const availableProviders = computed(() => [
     : []),
 ]);
 
-const providerSelectionDescription = computed(() =>
-  isWhatsappEmbeddedSignupDisabled.value
+const providerSelectionDescription = computed(() => {
+  // WaDesk: the Meta / Twilio wording does not apply when the plan only includes WhatsApp Web.
+  if (!isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_OFFICIAL)) {
+    return t('INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.WEB_ONLY_DESCRIPTION');
+  }
+  return isWhatsappEmbeddedSignupDisabled.value
     ? t('INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.RESTRICTION_DESCRIPTION')
-    : t('INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.DESCRIPTION')
-);
+    : t('INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.DESCRIPTION');
+});
 
 const selectProvider = providerValue => {
   const targetProvider =

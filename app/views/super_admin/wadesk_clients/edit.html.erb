@@ -18,7 +18,7 @@
         </label>
         <% if inbox_count.positive? %>
           <p class="text-xs text-amber-700 mt-1 ml-6">
-            Turning <%= label %> off keeps these <%= pluralize(inbox_count, 'inbox', plural: 'inboxes') %> working;
+            Turning <%= label %> off keeps its <%= pluralize(inbox_count, 'existing inbox', plural: 'existing inboxes') %> working;
             only new <%= label %> inboxes are blocked.
           </p>
         <% end %>

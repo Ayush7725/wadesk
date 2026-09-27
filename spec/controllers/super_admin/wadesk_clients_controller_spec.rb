@@ -75,7 +75,7 @@ RSpec.describe 'Super Admin WaDesk clients', type: :request do
         get "/super_admin/wadesk_clients/#{account.id}/edit"
 
         expect(response).to have_http_status(:success)
-        expect(response.body).to include('Turning WhatsApp Official off keeps these 1 inbox working')
+        expect(response.body).to include('Turning WhatsApp Official off keeps its 1 existing inbox working')
         expect(response.body).not_to include('Turning WhatsApp Web off')
       end
     end
