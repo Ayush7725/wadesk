@@ -141,7 +141,22 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 
 **Acceptance:** without the console, the operator switches a test account to Web-only (the Official options disappear
 for it, its existing inboxes keep working), sets its daily new-chat limit, and sees its WhatsApp Web number and state
-on the numbers page.
+on the numbers page. *Met in the browser test on 2026-09-27 (PRs #41–#45).*
+
+## S2.2 — Operator console and feature switches (CR-003, ADR-0009)
+
+**Status:** in progress. Covers WW-FR-34 and the approved console design
+
+| Task | Output |
+|---|---|
+| S2.2a Console shell: WaDesk-branded layout and sidebar, light/dark, Chatwoot admin under *Advanced* | Request specs (entry point, access, attention count) |
+| S2.2b Overview and WhatsApp numbers pages redesigned in the console | Request specs with realistic data, N+1 checks |
+| S2.2c Clients list and client page redesigned; *Features* section with the allow-listed switches | Request specs incl. allow-list, invalid input, what the dashboard reads |
+| S2.2d Client dashboard honours feature flags: hidden in sidebar/menus, "not on your plan" for direct links; default-on flags enabled for existing accounts | Vitest on real sidebar/router logic; migration spec |
+
+**Acceptance:** in the browser, the operator turns off Campaigns and Reports for a test client from its page in the
+console; that client's app no longer shows them and their links say "not on your plan"; turning them back on restores
+them. The console matches the approved mockup in light and dark mode and on a phone-width window.
 
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
