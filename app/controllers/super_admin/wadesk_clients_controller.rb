@@ -1,6 +1,8 @@
 # WaDesk: the operator console's Clients pages (ADR-0008). The operator manages each client's plan (WhatsApp Official /
 # WhatsApp Web), the daily new-chat limit of its WhatsApp Web numbers, and which Chatwoot features its app shows
 # (Wadesk::ClientFeatures). Turning a plan off only blocks new inboxes of that type; existing ones keep working.
+# The operator also creates clients with their first administrator (Wadesk::ClientCreation), renames them, suspends and
+# reactivates them (Wadesk::ClientSuspension) and deletes them, all without Chatwoot's own admin pages.
 class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
   include SuperAdmin::WadeskConsole
 
@@ -9,7 +11,7 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
   DAILY_NEW_CHATS_RANGE = (1..1000)
   LIMIT_KEY = Wadesk::Safety::NewChatLimit::LIMIT_KEY
 
-  before_action :set_account, only: [:edit, :update]
+  before_action :set_account, except: [:index, :new, :create]
 
   def index
     @search = params[:search].to_s.strip
@@ -20,11 +22,20 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
     @inbox_counts = whatsapp_inbox_counts(@accounts.map(&:id))
   end
 
+  def new
+    @creation = Wadesk::ClientCreation.new
+  end
+
   def edit
-    @daily_new_chats = @account.custom_attributes[LIMIT_KEY]
-    @selected_plans = PLAN_FEATURES.keys.select { |feature| @account.feature_enabled?(feature) }
-    @selected_features = Wadesk::ClientFeatures::NAMES.select { |feature| @account.feature_enabled?(feature) }
+    load_plan_form
     load_client_page
+  end
+
+  def create
+    @creation = Wadesk::ClientCreation.new(creation_params)
+    return render(:new, status: :unprocessable_entity) unless @creation.save(current_super_admin)
+
+    redirect_to edit_super_admin_wadesk_client_path(@creation.account), notice: creation_notice
   end
 
   def update
@@ -41,10 +52,72 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
     redirect_to edit_super_admin_wadesk_client_path(@account), notice: update_notice(kept_inboxes, turned_off)
   end
 
+  def rename
+    @new_name = params.dig(:client, :name).to_s.strip
+    return render_client_page_error(:rename, 'Enter the client\'s name.') if @new_name.blank?
+
+    old_name = @account.name
+    @account.update!(name: @new_name)
+    redirect_to edit_super_admin_wadesk_client_path(@account), notice: "Renamed #{old_name} to #{@account.name}."
+  end
+
+  def suspend
+    return redirect_to(edit_super_admin_wadesk_client_path(@account), alert: "#{@account.name} is already suspended.") if @account.suspended?
+
+    @suspension = Wadesk::ClientSuspension.new(params.fetch(:suspension, {}).permit(:category, :reason))
+    unless @suspension.suspend(@account, current_super_admin)
+      return render_client_page_error(:suspend, 'Choose a category and give a reason to suspend this client.')
+    end
+
+    redirect_to edit_super_admin_wadesk_client_path(@account),
+                notice: "#{@account.name} is suspended. Its team now sees an \"Account suspended\" page and new incoming messages are not saved."
+  end
+
+  def reactivate
+    Wadesk::ClientSuspension.reactivate(@account) if @account.suspended?
+    redirect_to edit_super_admin_wadesk_client_path(@account),
+                notice: "#{@account.name} is active again. Its team can use WaDesk and new incoming messages are saved again."
+  end
+
+  # Deletion runs in the background exactly as Chatwoot's Super Admin does it (SuperAdmin::AccountsController#destroy).
+  def destroy
+    @delete_confirmation = params[:confirm_name].to_s
+    return render_client_page_error(:delete, "Type #{@account.name} exactly to delete this client.") if @delete_confirmation != @account.name
+
+    DeleteObjectJob.perform_later(@account)
+    redirect_to super_admin_wadesk_clients_path, notice: "Deleting #{@account.name}. This runs in the background and can take a few minutes."
+  end
+
   private
 
   def set_account
     @account = Account.find(params[:id])
+  end
+
+  def creation_params
+    params.require(:client).permit(:name, :admin_name, :admin_email, :set_password, :admin_password)
+  end
+
+  def creation_notice
+    email = @creation.admin.email
+    created = "#{@creation.account.name} created."
+    if @creation.existing_admin
+      "#{created} #{email} already had a WaDesk login, so that user was added as the client's administrator. " \
+        'No invitation was sent and their password is unchanged.'
+    elsif @creation.invited?
+      "#{created} An invitation to set a password was emailed to #{email}."
+    else
+      "#{created} #{@creation.admin.name} can sign in now as #{email} with the password you set."
+    end
+  end
+
+  # The client page again, showing why a rename, suspension or deletion did not happen next to its field.
+  def render_client_page_error(form, message)
+    @form_error = { form => message }
+    load_plan_form
+    load_client_page
+    flash.now[:error] = message
+    render :edit, status: :unprocessable_entity
   end
 
   # Only allow-listed feature flags pass; anything else (e.g. captain_integration) is dropped here.
@@ -81,7 +154,15 @@ class SuperAdmin::WadeskClientsController < SuperAdmin::ApplicationController
     end
   end
 
+  def load_plan_form
+    @daily_new_chats = @account.custom_attributes[LIMIT_KEY]
+    @selected_plans = PLAN_FEATURES.keys.select { |feature| @account.feature_enabled?(feature) }
+    @selected_features = Wadesk::ClientFeatures::NAMES.select { |feature| @account.feature_enabled?(feature) }
+  end
+
   def load_client_page
+    @form_error ||= {}
+    @suspension ||= Wadesk::ClientSuspension.new
     @inbox_counts = whatsapp_inbox_counts([@account.id])
     @numbers = Channel::Whatsapp.whatsapp_web.where(account_id: @account.id).includes(:inbox).order(:id)
     @agents_count = @account.account_users.count

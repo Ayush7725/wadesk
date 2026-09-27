@@ -3,7 +3,9 @@
 
 <%= render 'super_admin/wadesk_console/page_header',
            title: 'Clients',
-           description: 'Each client\'s plan decides which WhatsApp inboxes it can add. Turning a plan off keeps existing inboxes working.' %>
+           description: 'Each client\'s plan decides which WhatsApp inboxes it can add. Turning a plan off keeps existing inboxes working.',
+           actions: link_to('New client', new_super_admin_wadesk_client_path, data: { new_client: true },
+                            class: 'inline-flex rounded-lg border border-n-brand bg-n-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand') %>
 
 <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="clients-table-title">
   <h2 id="clients-table-title" class="sr-only">Client list</h2>
