@@ -67,6 +67,8 @@ RSpec.describe 'Super Admin WaDesk client lifecycle', type: :request do
       end
 
       it 'creates the client with default features and emails the new administrator an invitation to set a password' do
+        # A real installation loads the feature defaults at setup; CI's empty test database does not have them.
+        ConfigLoader.new.process
         expect { post '/super_admin/wadesk_clients', params: { client: new_client } }.to change(Account, :count).by(1)
 
         expect(response).to redirect_to("/super_admin/wadesk_clients/#{created.id}/edit")
