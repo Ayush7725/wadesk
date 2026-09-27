@@ -192,7 +192,8 @@ RSpec.describe 'Platform Accounts API', type: :request do
         expect(response).to have_http_status(:success)
         account.reload
         expect(account.name).to eq('Test Account')
-        expect(account.enabled_features.keys).to match_array(%w[inbox_management ip_lookup help_center])
+        # WaDesk: whatsapp_official comes from the account factory (a default feature for new accounts).
+        expect(account.enabled_features.keys).to match_array(%w[inbox_management ip_lookup help_center whatsapp_official])
         expect(account.enabled_features['channel_facebook']).to be_nil
         expect(account.limits['agents']).to eq(5)
         expect(account.limits['inboxes']).to eq(10)

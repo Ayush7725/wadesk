@@ -13,7 +13,12 @@ vi.mock('vue-router');
 // channel_type, social ordering) derived from CHANNEL_LIST.
 const mountComposable = ({
   brandInfo,
-  features = { channel_instagram: true, channel_tiktok: true },
+  // WaDesk: whatsapp_official is on for new accounts by default.
+  features = {
+    channel_instagram: true,
+    channel_tiktok: true,
+    whatsapp_official: true,
+  },
   inboxes = [],
   isOnChatwootCloud = false,
   disableMetaInboxCreation = false,
@@ -236,6 +241,27 @@ describe('useDetectedChannels', () => {
 
       expect(displayedChannels.value.map(channel => channel.type)).toEqual([
         'tiktok',
+      ]);
+    });
+
+    // WaDesk: WhatsApp onboarding is embedded signup, an Official WhatsApp inbox.
+    it('hides WhatsApp from accounts without the WhatsApp Official plan', () => {
+      const { displayedChannels } = mountComposable({
+        features: {
+          channel_instagram: true,
+          channel_tiktok: true,
+          whatsapp_web: true,
+        },
+        brandInfo: {
+          socials: [
+            { type: 'whatsapp', url: 'https://wa.me/14155552671' },
+            { type: 'facebook', url: 'https://facebook.com/acme' },
+          ],
+        },
+      });
+
+      expect(displayedChannels.value.map(channel => channel.type)).toEqual([
+        'facebook',
       ]);
     });
 

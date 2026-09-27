@@ -29,6 +29,7 @@
 class Channel::TwilioSms < ApplicationRecord
   include Channelable
   include Rails.application.routes.url_helpers
+  include WhatsappOfficialPlan
 
   self.table_name = 'channel_twilio_sms'
 
@@ -50,6 +51,8 @@ class Channel::TwilioSms < ApplicationRecord
   validates :phone_number, uniqueness: true, allow_nil: true
 
   enum medium: { sms: 0, whatsapp: 1 }
+  # WaDesk: Twilio WhatsApp is Official WhatsApp.
+  alias whatsapp_official? whatsapp?
 
   def name
     medium == 'sms' ? 'Twilio SMS' : 'Whatsapp'

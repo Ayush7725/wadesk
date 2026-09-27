@@ -24,6 +24,16 @@ RSpec.describe WhatsappWebChannel do
 
       expect(channel.reload).to be_valid
     end
+
+    it 'keeps saving connection updates on existing inboxes after the feature is disabled' do
+      channel.save!
+      account.disable_features!('whatsapp_web')
+
+      WhatsappWeb::ConnectionUpdateService.new(channel: channel.reload, payload: { 'state' => 'connected', 'me' => { 'phone' => '919876543210' } })
+                                          .perform
+
+      expect(channel.reload.provider_config).to include('connection_state' => 'connected', 'connected_phone' => '919876543210')
+    end
   end
 
   describe 'link method' do
