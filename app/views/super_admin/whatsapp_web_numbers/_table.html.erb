@@ -1,0 +1,52 @@
+<%# WaDesk: one row per WhatsApp Web number. Locals: numbers (channels with inbox and account loaded). %>
+<% cell = 'px-3.5 py-3 border-b border-n-weak align-middle' %>
+<div class="overflow-x-auto">
+  <table class="w-full min-w-[47.5rem] border-collapse text-sm">
+    <thead>
+      <tr class="text-start text-xs font-medium text-n-slate-10">
+        <% ['Number', 'Client · inbox', 'State', 'What happened', 'Last change', 'Linked by'].each do |heading| %>
+          <th scope="col" class="whitespace-nowrap border-b border-n-weak px-3.5 py-2.5 text-start font-medium"><%= heading %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody class="[&>tr:last-child>td]:border-b-0">
+      <% numbers.each do |channel| %>
+        <% config = channel.provider_config %>
+        <% state = whatsapp_web_state(channel) %>
+        <% changed_at = config['connection_updated_at'].presence && Time.zone.parse(config['connection_updated_at']) %>
+        <tr class="hover:bg-n-alpha-2" data-number="<%= channel.id %>">
+          <td class="<%= cell %> whitespace-nowrap font-mono text-xs">
+            <%= channel.phone_number %>
+            <%# The engine reports the linked phone as digits only; the inbox number has a leading +. %>
+            <% if config['connected_phone'].present? && config['connected_phone'] != channel.phone_number.delete('+') %>
+              <span class="block text-n-slate-10">Scanned by +<%= config['connected_phone'] %></span>
+            <% end %>
+          </td>
+          <td class="<%= cell %>">
+            <%= link_to channel.account.name, edit_super_admin_wadesk_client_path(channel.account),
+                        class: 'block rounded font-medium text-n-slate-12 hover:text-n-blue-11 hover:underline ' \
+                               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+            <span class="text-xs text-n-slate-10"><%= channel.inbox.name %></span>
+          </td>
+          <td class="<%= cell %>">
+            <span class="flex flex-col items-start gap-1.5">
+              <%= console_pill(state[:label], state[:tone]) %>
+              <%= console_pill('Needs re-link', :bad) if channel.reauthorization_required? %>
+            </span>
+          </td>
+          <td class="<%= cell %> text-n-slate-11"><%= whatsapp_web_reason(channel) %></td>
+          <td class="<%= cell %> whitespace-nowrap tabular-nums text-n-slate-10">
+            <% if changed_at %>
+              <time datetime="<%= changed_at.utc.iso8601 %>" title="<%= changed_at.utc.strftime('%Y-%m-%d %H:%M:%S UTC') %>">
+                <%= time_ago_in_words(changed_at) %> ago
+              </time>
+            <% else %>
+              <span aria-hidden="true">—</span><span class="sr-only">Never</span>
+            <% end %>
+          </td>
+          <td class="<%= cell %> whitespace-nowrap"><%= config['link_method'] == 'code' ? 'Pairing code' : 'QR code' %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

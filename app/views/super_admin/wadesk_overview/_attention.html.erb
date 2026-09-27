@@ -1,0 +1,37 @@
+<%# WaDesk: numbers that need attention, each linking to its client. Locals: numbers (first few), total. %>
+<% bar_tones = { bad: 'bg-n-ruby-9', warn: 'bg-n-amber-9', mute: 'bg-n-slate-6', ok: 'bg-n-teal-9', info: 'bg-n-blue-9' } %>
+<section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="attention-title" data-section="attention">
+  <div class="flex items-center justify-between gap-3 border-b border-n-weak px-4 py-3.5">
+    <h2 class="text-sm font-semibold" id="attention-title">Numbers that need attention</h2>
+    <%= link_to 'See all numbers', super_admin_whatsapp_web_numbers_path,
+                class: 'rounded text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+  </div>
+  <% if numbers.empty? %>
+    <p class="px-4 py-8 text-center text-sm text-n-slate-11" data-empty="attention">All good. Every WhatsApp Web number is connected.</p>
+  <% else %>
+    <ul class="py-1.5">
+      <% numbers.each do |channel| %>
+        <% state = whatsapp_web_state(channel) %>
+        <li class="grid grid-cols-[0.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5 [&+li]:border-t [&+li]:border-n-weak" data-number="<%= channel.id %>">
+          <span class="h-9 w-2 rounded <%= bar_tones.fetch(state[:tone]) %>" aria-hidden="true"></span>
+          <div class="min-w-0">
+            <p class="text-sm">
+              <%= link_to channel.account.name, edit_super_admin_wadesk_client_path(channel.account),
+                          class: 'rounded font-medium text-n-slate-12 hover:text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+              <span class="text-n-slate-11">· <%= channel.inbox.name %></span>
+              <span class="whitespace-nowrap font-mono text-xs text-n-slate-10"><%= channel.phone_number %></span>
+            </p>
+            <p class="text-xs text-n-slate-11"><%= whatsapp_web_reason(channel) %></p>
+          </div>
+          <%= console_pill(state[:label], state[:tone]) %>
+        </li>
+      <% end %>
+    </ul>
+    <% if total > numbers.size %>
+      <p class="border-t border-n-weak px-4 py-3 text-sm">
+        <%= link_to "See all #{total} numbers that need attention", super_admin_whatsapp_web_numbers_path(filter: 'attention'),
+                    class: 'rounded font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+      </p>
+    <% end %>
+  <% end %>
+</section>

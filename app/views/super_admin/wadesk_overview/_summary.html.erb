@@ -1,0 +1,31 @@
+<%# WaDesk: the four summary cards. Locals: clients ({status => count}), numbers ({total:, clients:, connected:}), needing_attention. %>
+<% active = clients['active'].to_i %>
+<% suspended = clients['suspended'].to_i %>
+<% card = 'flex flex-col gap-1 rounded-xl border border-n-weak bg-n-solid-1 px-4 py-4' %>
+<section class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Summary">
+  <div class="<%= card %>" data-summary="clients">
+    <span class="text-sm text-n-slate-11">Active clients</span>
+    <strong class="text-2xl font-semibold tracking-tight tabular-nums"><%= active %></strong>
+    <small class="text-xs text-n-slate-10"><%= suspended %> suspended</small>
+  </div>
+  <div class="<%= card %>" data-summary="numbers">
+    <span class="text-sm text-n-slate-11">WhatsApp Web numbers</span>
+    <strong class="text-2xl font-semibold tracking-tight tabular-nums"><%= numbers[:total] %></strong>
+    <small class="text-xs text-n-slate-10">across <%= pluralize(numbers[:clients], 'client') %></small>
+  </div>
+  <div class="<%= card %>" data-summary="connected">
+    <span class="text-sm text-n-slate-11" id="connected-label">Connected</span>
+    <strong class="text-2xl font-semibold tracking-tight tabular-nums">
+      <%= numbers[:connected] %><span class="text-base font-normal text-n-slate-10"> / <%= numbers[:total] %></span>
+    </strong>
+    <progress class="mt-1.5 h-1.5 w-full appearance-none overflow-hidden rounded-full bg-n-alpha-2 [&::-webkit-progress-bar]:bg-n-alpha-2 [&::-webkit-progress-value]:bg-n-teal-9 [&::-moz-progress-bar]:bg-n-teal-9"
+              value="<%= numbers[:connected] %>" max="<%= [numbers[:total], 1].max %>" aria-labelledby="connected-label">
+      <%= numbers[:connected] %> of <%= numbers[:total] %>
+    </progress>
+  </div>
+  <div class="<%= card %>" data-summary="attention">
+    <span class="text-sm text-n-slate-11">Need attention</span>
+    <strong class="text-2xl font-semibold tracking-tight tabular-nums <%= needing_attention.positive? ? 'text-n-ruby-11' : '' %>"><%= needing_attention %></strong>
+    <small class="text-xs text-n-slate-10">logged out, failed or waiting</small>
+  </div>
+</section>

@@ -1,34 +1,35 @@
-# WaDesk: lists every WhatsApp Web number across client accounts with its stored connection state (WW-FR-31).
+# WaDesk: every WhatsApp Web number across client accounts with its stored connection state (WW-FR-31).
 class SuperAdmin::WhatsappWebNumbersController < SuperAdmin::ApplicationController
-  CONNECTED_SQL = "channel_whatsapp.provider_config->>'connection_state' IS NOT DISTINCT FROM 'connected'".freeze
-  STATE_LABELS = {
-    'connected' => 'Connected', 'connecting' => 'Connecting', 'qr_pending' => 'Waiting for scan',
-    'disconnected' => 'Disconnected', 'logged_out' => 'Logged out', 'failed' => 'Could not link'
-  }.freeze
-  REASON_LABELS = {
-    'unlinked_from_phone' => 'Removed from the phone\'s Linked devices', 'logged_out_by_admin' => 'Logged out by an inbox administrator',
-    'number_mismatch' => 'A phone with a different number was linked', 'qr_expired' => 'Nobody linked the phone in time',
-    'connection_lost' => 'Connection to WhatsApp lost', 'forbidden' => 'WhatsApp refused the connection'
-  }.freeze
+  include SuperAdmin::WadeskConsole
 
-  helper_method :state_label, :reason_label
+  FILTERS = { 'attention' => 'Need attention', 'connected' => 'Connected', 'all' => 'All' }.freeze
+  # Sorts false (needs attention) before true (connected).
+  CONNECTED_SQL = "channel_whatsapp.provider_config->>'connection_state' IS NOT DISTINCT FROM 'connected'".freeze
 
   def index
-    numbers = Channel::Whatsapp.where(provider: 'baileys')
-    @summary = { total: numbers.count, connected: numbers.where(CONNECTED_SQL).count }
-    @filter = %w[attention connected].include?(params[:filter]) ? params[:filter] : 'all'
-    numbers = numbers.where(CONNECTED_SQL) if @filter == 'connected'
-    numbers = numbers.where.not(CONNECTED_SQL) if @filter == 'attention'
-    @numbers = numbers.includes(:inbox, :account).order(Arel.sql(CONNECTED_SQL), :account_id, :id).page(params[:page]).per(50)
+    @filter = FILTERS.key?(params[:filter]) ? params[:filter] : 'attention'
+    @search = params[:search].to_s.strip
+    @counts = { 'attention' => numbers_needing_attention_count, 'connected' => Channel::Whatsapp.whatsapp_web_connected.count,
+                'all' => Channel::Whatsapp.whatsapp_web.count }
+    @numbers = searched(filtered).includes(:inbox, :account).order(Arel.sql(CONNECTED_SQL), :account_id, :id)
+                                 .page(params[:page]).per(50).load
   end
 
   private
 
-  def state_label(state)
-    STATE_LABELS.fetch(state, 'Never linked')
+  def filtered
+    { 'attention' => Channel::Whatsapp.whatsapp_web_needing_attention, 'connected' => Channel::Whatsapp.whatsapp_web_connected }
+      .fetch(@filter, Channel::Whatsapp.whatsapp_web)
   end
 
-  def reason_label(reason)
-    REASON_LABELS.fetch(reason, reason.to_s.humanize)
+  # Matches part of the number however it is typed (numbers are stored as + and digits), or of the client or inbox name.
+  def searched(numbers)
+    return numbers if @search.blank?
+
+    name = "%#{Channel::Whatsapp.sanitize_sql_like(@search)}%"
+    digits = @search.gsub(/\D/, '')
+    conditions = ['accounts.name ILIKE :name', 'inboxes.name ILIKE :name']
+    conditions << 'channel_whatsapp.phone_number LIKE :digits' if digits.present?
+    numbers.joins(:account, :inbox).where(conditions.join(' OR '), name: name, digits: "%#{digits}%")
   end
 end

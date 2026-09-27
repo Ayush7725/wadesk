@@ -1,0 +1,19 @@
+<%# WaDesk: previous / next pages of the numbers list. Locals: numbers (Kaminari page), filter, search. %>
+<% if numbers.total_pages > 1 %>
+  <% link_class = 'rounded-lg border border-n-weak px-3 py-1.5 font-medium hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+  <nav class="flex flex-wrap items-center justify-between gap-2 border-t border-n-weak px-3.5 py-3 text-sm" aria-label="Pages">
+    <span class="text-n-slate-11 tabular-nums">
+      <%= numbers.offset_value + 1 %>–<%= numbers.offset_value + numbers.size %> of <%= numbers.total_count %>
+    </span>
+    <span class="flex gap-2">
+      <% if numbers.prev_page %>
+        <%= link_to 'Previous', super_admin_whatsapp_web_numbers_path(filter: filter, search: search.presence, page: numbers.prev_page),
+                    class: link_class, rel: 'prev' %>
+      <% end %>
+      <% if numbers.next_page %>
+        <%= link_to 'Next', super_admin_whatsapp_web_numbers_path(filter: filter, search: search.presence, page: numbers.next_page),
+                    class: link_class, rel: 'next' %>
+      <% end %>
+    </span>
+  </nav>
+<% end %>

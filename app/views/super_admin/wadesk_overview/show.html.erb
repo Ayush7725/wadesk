@@ -1,4 +1,12 @@
+<%# WaDesk: operator console home — clients, WhatsApp Web numbers and plans at a glance (ADR-0008). %>
 <% content_for(:title) { 'Overview' } %>
 
 <%= render 'super_admin/wadesk_console/page_header', title: 'Overview',
                                                     description: 'How your clients and their WhatsApp numbers are doing right now.' %>
+
+<%= render 'summary', clients: @clients, numbers: @numbers, needing_attention: numbers_needing_attention_count %>
+
+<div class="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+  <%= render 'attention', numbers: @needing_attention, total: numbers_needing_attention_count %>
+  <%= render 'plans', plans: @plans %>
+</div>
