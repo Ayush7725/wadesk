@@ -750,7 +750,9 @@ Rails.application.routes.draw do
   devise_scope :super_admin do
     get 'super_admin/logout', to: 'super_admin/devise/sessions#destroy'
     namespace :super_admin do
-      root to: 'dashboard#index'
+      # WaDesk: the operator console is Super Admin's home page; Chatwoot's own dashboard stays one click away.
+      root to: 'wadesk_overview#show'
+      get 'chatwoot', to: 'dashboard#index', as: :chatwoot_dashboard
 
       resource :app_config, only: [:show, :create]
       resource :push_diagnostics, only: [:show, :create] do

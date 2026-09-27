@@ -1,0 +1,15 @@
+<%# WaDesk: page title row of the operator console. Locals: title; optional description, back_path + back_label, actions (HTML). %>
+<header class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 mb-5">
+  <div class="min-w-0">
+    <% if local_assigns[:back_path] %>
+      <%= link_to "← #{back_label}", back_path, class: 'text-sm text-n-slate-10 hover:text-n-blue-11' %>
+    <% end %>
+    <h1 class="mt-1 text-xl font-semibold tracking-tight text-n-slate-12 text-balance"><%= title %></h1>
+    <% if local_assigns[:description] %>
+      <p class="mt-0.5 max-w-prose text-sm text-n-slate-11"><%= description %></p>
+    <% end %>
+  </div>
+  <% if local_assigns[:actions] %>
+    <div class="flex flex-wrap items-center gap-2"><%= actions %></div>
+  <% end %>
+</header>

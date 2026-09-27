@@ -4,6 +4,12 @@ module WhatsappWebChannel
   extend ActiveSupport::Concern
 
   included do
+    scope :whatsapp_web, -> { where(provider: 'baileys') }
+    # Missing state means the number was never linked, so it counts as needing attention.
+    scope :whatsapp_web_connected, -> { whatsapp_web.where("channel_whatsapp.provider_config->>'connection_state' = 'connected'") }
+    scope :whatsapp_web_needing_attention, lambda {
+      whatsapp_web.where("channel_whatsapp.provider_config->>'connection_state' IS DISTINCT FROM 'connected'")
+    }
     before_validation :default_whatsapp_web_link_method, if: :whatsapp_web?
     validate :whatsapp_web_enabled_for_account, if: -> { whatsapp_web? && (new_record? || will_save_change_to_provider?) }
     after_commit :start_whatsapp_web_session, on: :create, if: :whatsapp_web?

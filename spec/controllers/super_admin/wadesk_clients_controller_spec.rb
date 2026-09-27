@@ -30,8 +30,8 @@ RSpec.describe 'Super Admin WaDesk clients', type: :request do
   context 'when signed in as a super admin' do
     before { sign_in(super_admin, scope: :super_admin) }
 
-    it 'links the page from the navigation' do
-      get '/super_admin'
+    it 'links the page from Chatwoot\'s admin navigation' do
+      get '/super_admin/chatwoot'
 
       link = Nokogiri::HTML(response.body).at_css('a[href$="/super_admin/wadesk_clients"]')
       expect(link.text.squish).to eq('WaDesk Clients')

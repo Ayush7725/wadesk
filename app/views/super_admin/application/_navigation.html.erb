@@ -31,11 +31,14 @@ as defined by the routes in the `admin/` namespace
     </div>
 
     <ul class="my-4">
-      <%= render partial: "nav_item", locals: { icon: 'icon-grid-line', url: super_admin_root_url, label: 'Dashboard' } %>
+      <%# WaDesk: back to the operator console; Chatwoot's own dashboard moved to /super_admin/chatwoot. %>
+      <%= render partial: "nav_item", locals: { icon: 'icon-dashboard-line', url: super_admin_root_url, label: 'WaDesk console' } %>
+      <%= render partial: "nav_item", locals: { icon: 'icon-grid-line', url: super_admin_chatwoot_dashboard_url, label: 'Dashboard' } %>
       <%= render partial: "nav_item", locals: { icon: 'icon-chat-smile-3-line', url: super_admin_wadesk_clients_url, label: 'WaDesk Clients' } %>
       <% Administrate::Namespace.new(namespace).resources.each do |resource| %>
         <% next if ["account_users", "access_tokens", "installation_configs", "dashboard", "devise/sessions", "app_configs", "instance_statuses", "settings", "push_diagnostics"].include?  resource.resource %>
         <% next if resource.resource == "wadesk_clients" # WaDesk: custom page, linked above %>
+        <% next if resource.resource == "wadesk_overview" # WaDesk: the console's home page, linked below %>
         <% next if resource.resource == "platform_banners" && !ChatwootApp.chatwoot_cloud? %>
         <% next if resource.resource == "whatsapp_web_numbers" # WaDesk: custom page, linked below %>
         <%= render partial: "nav_item", locals: {
