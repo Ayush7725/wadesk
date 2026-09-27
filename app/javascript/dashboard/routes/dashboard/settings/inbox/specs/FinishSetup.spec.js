@@ -144,6 +144,26 @@ describe('FinishSetup', () => {
     );
   });
 
+  it('does not offer a second QR code right after linking a WhatsApp Web number', async () => {
+    mocks.inbox = {
+      channel_type: INBOX_TYPES.WHATSAPP,
+      provider: 'baileys',
+      provider_config: { link_method: 'qr' },
+      phone_number: '+919800000000',
+    };
+
+    const wrapper = mountComponent();
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain(
+      'INBOX_MGMT.FINISH.WHATSAPP_QR_INSTRUCTION'
+    );
+    expect(mocks.toDataURL).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain(
+      'INBOX_MGMT.ADD.WHATSAPP.API_CALLBACK.WEBHOOK_URL'
+    );
+  });
+
   it('keeps manual webhook details primary for WhatsApp Cloud', async () => {
     mocks.inbox = {
       channel_type: INBOX_TYPES.WHATSAPP,

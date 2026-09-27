@@ -33,6 +33,7 @@ const currentInbox = computed(() =>
 const {
   isAWhatsAppCloudChannel,
   isAWhatsAppChannel,
+  isAWhatsAppWebChannel,
   isASmsInbox,
   isALineChannel,
   isAnEmailChannel,
@@ -68,8 +69,14 @@ const whatsappPhoneNumber = computed(() => {
   return (currentInbox.value?.phone_number || '').replace('whatsapp:', '');
 });
 
+// WaDesk: WhatsApp Web inboxes were just linked by scanning a QR code; a second "chat with us" QR here gets scanned
+// by mistake with the linked phone, so it is left out.
 const shouldShowWhatsAppQr = computed(() => {
-  return isAWhatsAppChannel.value && Boolean(whatsappPhoneNumber.value);
+  return (
+    isAWhatsAppChannel.value &&
+    !isAWhatsAppWebChannel.value &&
+    Boolean(whatsappPhoneNumber.value)
+  );
 });
 
 const shouldShowSmsQr = computed(() => {
