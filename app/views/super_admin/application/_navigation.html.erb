@@ -39,6 +39,7 @@ as defined by the routes in the `admin/` namespace
         <% next if ["account_users", "access_tokens", "installation_configs", "dashboard", "devise/sessions", "app_configs", "instance_statuses", "settings", "push_diagnostics"].include?  resource.resource %>
         <% next if resource.resource == "wadesk_clients" # WaDesk: custom page, linked above %>
         <% next if resource.resource == "wadesk_overview" # WaDesk: the console's home page, linked below %>
+        <% next if %w[wadesk_users wadesk_system_healths wadesk_settings].include?(resource.resource) # WaDesk: console pages %>
         <% next if resource.resource == "platform_banners" && !ChatwootApp.chatwoot_cloud? %>
         <% next if resource.resource == "whatsapp_web_numbers" # WaDesk: custom page, linked below %>
         <%= render partial: "nav_item", locals: {

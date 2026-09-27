@@ -39,16 +39,18 @@ module SuperAdmin::WadeskConsoleHelper
       { label: 'Overview', url: super_admin_root_path, icon: 'icon-grid-line', active: controller_name == 'wadesk_overview' },
       { label: 'Clients', url: super_admin_wadesk_clients_path, icon: 'icon-building-4-line', active: controller_name == 'wadesk_clients' },
       { label: 'WhatsApp numbers', url: super_admin_whatsapp_web_numbers_path, icon: 'icon-whatsapp-line',
-        active: controller_name == 'whatsapp_web_numbers', badge: numbers_needing_attention_count }
+        active: controller_name == 'whatsapp_web_numbers', badge: numbers_needing_attention_count },
+      { label: 'Users', url: super_admin_wadesk_users_path, icon: 'icon-user-follow-line', active: controller_name == 'wadesk_users' }
     ]
   end
 
-  # Chatwoot's own Super Admin pages, unchanged.
-  def console_advanced_links
+  # Operator pages about the installation itself. Chatwoot's raw admin and developer tools (Sidekiq, platform apps,
+  # agent bots, push diagnostics) are deliberately not linked; they stay reachable by URL for developers (CR-004).
+  def console_system_links
     [
-      { label: 'Chatwoot admin', url: super_admin_chatwoot_dashboard_path, icon: 'icon-gear', active: false },
-      { label: 'System health', url: super_admin_instance_status_path, icon: 'icon-health-book-line', active: false },
-      { label: 'Background jobs', url: sidekiq_web_path, icon: 'icon-mist-fill', active: false }
+      { label: 'System health', url: super_admin_wadesk_system_health_path, icon: 'icon-health-book-line',
+        active: controller_name == 'wadesk_system_healths' },
+      { label: 'Settings', url: super_admin_wadesk_settings_path, icon: 'icon-gear', active: controller_name == 'wadesk_settings' }
     ]
   end
 

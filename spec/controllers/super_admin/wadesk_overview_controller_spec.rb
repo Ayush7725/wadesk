@@ -30,7 +30,10 @@ RSpec.describe 'Super Admin WaDesk console', type: :request do
       page = Nokogiri::HTML(response.body)
       nav = page.css('aside[aria-label="Operator console"] a').map { |link| [link.text.squish, link['href']] }
       expect(nav).to include(['Overview', '/super_admin'], ['Clients', '/super_admin/wadesk_clients'],
-                             ['WhatsApp numbers', '/super_admin/whatsapp_web_numbers'], ['Chatwoot admin', '/super_admin/chatwoot'])
+                             ['WhatsApp numbers', '/super_admin/whatsapp_web_numbers'], ['Users', '/super_admin/wadesk_users'],
+                             ['System health', '/super_admin/wadesk_system_health'], ['Settings', '/super_admin/wadesk_settings'])
+      # One app: Chatwoot's raw admin and developer tools are not linked from the console (CR-004).
+      expect(nav.map(&:last)).not_to include('/super_admin/chatwoot', '/monitoring/sidekiq', '/super_admin/instance_status')
       expect(page.at_css('aside a[aria-current="page"]').text.squish).to eq('Overview')
       expect(page.at_css('aside').text).to include('Riya Operator', 'WaDesk', 'Operator Console')
     end
