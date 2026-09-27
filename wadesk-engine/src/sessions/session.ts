@@ -121,6 +121,13 @@ export class Session {
     await this.credsSaving;
   }
 
+  // Abandons a linking attempt that was never completed. Nothing is linked yet, so its half-registered credentials
+  // (e.g. from a requested pairing code) are dropped; reusing them makes WhatsApp answer 401 as if unlinked.
+  async cancelLinking(): Promise<void> {
+    this.halt()?.end();
+    await this.forgetCredentials();
+  }
+
   // Closes the connection without changing state (engine shutdown); the session resumes on next boot.
   stop(): void {
     this.halt()?.end();
@@ -298,6 +305,7 @@ export class Session {
     if (this.qrDeadline !== undefined && Date.now() >= this.qrDeadline) {
       this.stopped = true;
       this.qrDeadline = undefined;
+      await this.forgetCredentials(); // never linked: the next attempt must start clean
       await this.transition('disconnected', { reason: 'qr_expired', lastError: 'qr_expired' });
       return;
     }
