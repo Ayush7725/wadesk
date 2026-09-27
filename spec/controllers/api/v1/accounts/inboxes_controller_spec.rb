@@ -256,6 +256,19 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(response.parsed_body['reauthorization_required']).to be(false)
       end
 
+      it 'returns reauthorization_required for a WhatsApp Web channel unlinked from the phone' do
+        account.enable_features!('whatsapp_web')
+        whatsapp_channel = create(:channel_whatsapp, account: account, provider: 'baileys', sync_templates: false)
+        whatsapp_channel.prompt_reauthorization!
+
+        get "/api/v1/accounts/#{account.id}/inboxes/#{whatsapp_channel.inbox.id}",
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['reauthorization_required']).to be(true)
+      end
+
       it 'returns the inbox if assigned inbox is assigned as agent' do
         create(:inbox_member, user: agent, inbox: inbox)
         get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}",
