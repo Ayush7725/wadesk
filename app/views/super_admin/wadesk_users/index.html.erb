@@ -1,3 +1,105 @@
+<%# WaDesk: everyone who can log in to a client's WaDesk or to this console (CR-004). %>
 <% content_for(:title) { 'Users' } %>
+<% focus_ring = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand' %>
+<% filters = SuperAdmin::WadeskUsersController::FILTERS %>
 
-<%= render 'super_admin/wadesk_console/page_header', title: 'Users', description: "Everyone who can log in to a client's WaDesk, and who can open this console." %>
+<%= render 'super_admin/wadesk_console/page_header',
+           title: 'Users',
+           description: "Everyone who can log in to a client's WaDesk, and who can open this console.",
+           actions: link_to('New user', new_super_admin_wadesk_user_path,
+                            class: "rounded-lg border border-n-brand bg-n-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 #{focus_ring}") %>
+
+<section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="users-table-title">
+  <h2 id="users-table-title" class="sr-only">User list</h2>
+  <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-n-weak px-3.5 py-3">
+    <%= form_with url: super_admin_wadesk_users_path, method: :get, local: true, role: 'search',
+                  class: 'flex min-w-0 max-w-sm flex-[1_1_14rem] items-center gap-2' do |f| %>
+      <% if @filter != 'all' %>
+        <%= hidden_field_tag :filter, @filter, id: nil %>
+      <% end %>
+      <%= f.label :search, 'Search users', class: 'sr-only' %>
+      <div class="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-n-weak bg-n-alpha-2 px-2.5 py-1.5 focus-within:outline focus-within:outline-2 focus-within:outline-n-brand">
+        <svg class="size-4 flex-none text-n-slate-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <%= f.search_field :search, value: @search, placeholder: 'Search by name or email',
+                                    class: 'w-full min-w-0 border-0 bg-transparent p-0 text-sm text-n-slate-12 outline-none placeholder:text-n-slate-10 focus:ring-0' %>
+      </div>
+      <%= f.submit 'Search', name: nil, class: "cursor-pointer rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 text-sm font-medium hover:bg-n-alpha-2 #{focus_ring}" %>
+    <% end %>
+
+    <nav class="flex flex-wrap gap-0.5 rounded-lg border border-n-weak bg-n-alpha-2 p-0.5" aria-label="Filter users">
+      <% filters.each do |filter, label| %>
+        <% active = @filter == filter %>
+        <%= link_to super_admin_wadesk_users_path(filter: (filter == 'all' ? nil : filter), search: @search.presence),
+                    class: "rounded-md px-2.5 py-1 text-sm font-medium #{focus_ring} " \
+                           "#{active ? 'bg-n-solid-1 text-n-slate-12 shadow-sm' : 'text-n-slate-11 hover:text-n-slate-12'}",
+                    'aria-current': (active ? 'page' : nil), data: { filter: filter } do %>
+          <%= label %> <span class="tabular-nums text-n-slate-10"><%= @counts[filter] %></span>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+
+  <% if @users.empty? %>
+    <div class="px-6 py-8 text-center text-sm text-n-slate-11" data-empty="users">
+      <% if @search.present? %>
+        <p>No user matches “<%= @search %>”<%= " in #{filters[@filter]}" unless @filter == 'all' %>.</p>
+      <% elsif @filter == 'unconfirmed' %>
+        <p>Nobody has a pending invitation.</p>
+      <% else %>
+        <p>No users yet.</p>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[720px] text-sm" aria-labelledby="users-table-title">
+        <thead>
+          <tr class="border-b border-n-weak text-start text-xs font-medium text-n-slate-10">
+            <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">User</th>
+            <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Clients</th>
+            <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Status</th>
+            <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Last sign-in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @users.each do |user| %>
+            <% memberships = user.account_users.sort_by { |account_user| [account_user.account.name.downcase, account_user.id] } %>
+            <tr class="relative border-b border-n-weak last:border-b-0 hover:bg-n-alpha-1" data-user-id="<%= user.id %>">
+              <td class="px-3.5 py-3" data-column="user">
+                <span class="flex flex-wrap items-center gap-2">
+                  <%# The link covers the whole row, so clicking anywhere on it opens the user page. %>
+                  <%= link_to user.name, super_admin_wadesk_user_path(user),
+                              class: "font-medium text-n-slate-12 after:absolute after:inset-0 hover:underline #{focus_ring}" %>
+                  <% if user.type == 'SuperAdmin' %><%= console_pill('Operator', :info) %><% end %>
+                </span>
+                <span class="block text-xs text-n-slate-10"><%= user.email %></span>
+              </td>
+              <td class="px-3.5 py-3" data-column="clients">
+                <% if memberships.empty? %>
+                  <span class="text-n-slate-10">No client</span>
+                <% else %>
+                  <% memberships.first(2).each do |account_user| %>
+                    <span class="block text-n-slate-12"><%= account_user.account.name %> <span class="text-n-slate-10">· <%= Wadesk::UserAccess::ROLES[account_user.role] %></span></span>
+                  <% end %>
+                  <% if memberships.size > 2 %>
+                    <span class="block text-xs text-n-slate-10">+<%= memberships.size - 2 %> more</span>
+                  <% end %>
+                <% end %>
+              </td>
+              <td class="px-3.5 py-3" data-column="status">
+                <%= user.confirmed? ? console_pill('Confirmed', :ok) : console_pill('Invite pending', :warn) %>
+              </td>
+              <td class="whitespace-nowrap px-3.5 py-3 text-n-slate-11" data-column="last-sign-in">
+                <% if user.last_sign_in_at %>
+                  <time datetime="<%= user.last_sign_in_at.iso8601 %>" title="<%= user.last_sign_in_at.strftime('%-d %b %Y, %H:%M') %>"><%= time_ago_in_words(user.last_sign_in_at) %> ago</time>
+                <% else %>
+                  Never
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <%= render 'pagination', users: @users, filter: @filter, search: @search %>
+  <% end %>
+</section>

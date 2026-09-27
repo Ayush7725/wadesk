@@ -769,7 +769,16 @@ Rails.application.routes.draw do
         post :suspend, on: :member
         post :reactivate, on: :member
       end
-      resources :wadesk_users, only: [:index] # WaDesk: operator console users (S2.3)
+      resources :wadesk_users, only: [:index, :show, :new, :create] do # WaDesk: operator console users (S2.3)
+        member do
+          post :resend_confirmation
+          post :confirm
+          patch :password
+          patch :operator
+          post :memberships, action: :add_membership
+          delete 'memberships/:membership_id', action: :remove_membership, as: :membership
+        end
+      end
       resource :wadesk_system_health, only: [:show] # WaDesk: operator console system health (S2.3)
       resource :wadesk_settings, only: [:show, :update] # WaDesk: operator console settings (S2.3)
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

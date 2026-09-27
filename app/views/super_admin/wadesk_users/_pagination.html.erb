@@ -1,0 +1,20 @@
+<%# WaDesk: previous / next pages of the users list. Locals: users (Kaminari page), filter, search. %>
+<% if users.total_pages > 1 %>
+  <% link_class = 'rounded-lg border border-n-weak px-3 py-1.5 font-medium hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+  <% filter_param = filter == 'all' ? nil : filter %>
+  <nav class="flex flex-wrap items-center justify-between gap-2 border-t border-n-weak px-3.5 py-3 text-sm" aria-label="Pages">
+    <span class="text-n-slate-11 tabular-nums">
+      <%= users.offset_value + 1 %>–<%= users.offset_value + users.size %> of <%= users.total_count %>
+    </span>
+    <span class="flex gap-2">
+      <% if users.prev_page %>
+        <%= link_to 'Previous', super_admin_wadesk_users_path(filter: filter_param, search: search.presence, page: users.prev_page),
+                    class: link_class, rel: 'prev' %>
+      <% end %>
+      <% if users.next_page %>
+        <%= link_to 'Next', super_admin_wadesk_users_path(filter: filter_param, search: search.presence, page: users.next_page),
+                    class: link_class, rel: 'next' %>
+      <% end %>
+    </span>
+  </nav>
+<% end %>

@@ -1,0 +1,198 @@
+<%# WaDesk: one user: their clients, invitation, password and operator access (CR-004). Works without JavaScript. %>
+<% content_for(:title) { @user.name } %>
+<% focus_ring = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand' %>
+<% primary_button = "cursor-pointer rounded-lg border border-n-brand bg-n-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 #{focus_ring}" %>
+<% secondary_button = "cursor-pointer rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-2 #{focus_ring}" %>
+<% danger_button = "cursor-pointer rounded-lg border border-n-ruby-9 bg-n-ruby-9 px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 #{focus_ring}" %>
+<% input_class = 'w-full rounded-lg border border-n-weak bg-n-alpha-2 px-2.5 py-1.5 text-sm text-n-slate-12 outline-none focus:outline focus:outline-2 focus:outline-n-brand' %>
+<% panel_head = 'border-b border-n-weak px-4 py-3.5 sm:px-5' %>
+<% operator = @user.type == 'SuperAdmin' %>
+<% own_account = @user.id == current_super_admin.id %>
+<% password_rules = "At least #{Devise.password_length.min} characters, with an uppercase letter, a lowercase letter, a number and a special character (e.g. !@#$%)." %>
+
+<%= render 'super_admin/wadesk_console/page_header',
+           title: @user.name,
+           description: @user.email,
+           back_path: super_admin_wadesk_users_path, back_label: 'Users',
+           actions: safe_join([(console_pill('Operator', :info) if operator),
+                               (@user.confirmed? ? console_pill('Confirmed', :ok) : console_pill('Invite pending', :warn))].compact) %>
+
+<div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+  <div class="flex flex-col gap-4">
+    <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="clients-title">
+      <div class="<%= panel_head %>">
+        <h2 id="clients-title" class="text-sm font-semibold text-n-slate-12">Clients</h2>
+        <p class="mt-0.5 text-xs text-n-slate-11">The clients whose WaDesk this user can log in to. Admins manage the client's inboxes, agents and settings.</p>
+      </div>
+      <% if @memberships.empty? %>
+        <p class="px-4 py-4 text-sm text-n-slate-10 sm:px-5" data-empty="clients">Not added to any client yet.</p>
+      <% else %>
+        <ul class="divide-y divide-n-weak">
+          <% @memberships.each do |account_user| %>
+            <% account = account_user.account %>
+            <% last_admin = Wadesk::UserAccess.last_administrator?(account_user, @administrator_counts) %>
+            <li class="px-4 py-3 sm:px-5" data-membership-id="<%= account_user.id %>">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <%= link_to account.name, edit_super_admin_wadesk_client_path(account), class: "font-medium text-n-slate-12 hover:underline #{focus_ring}" %>
+                  <span class="text-n-slate-10">· <%= Wadesk::UserAccess::ROLES[account_user.role] %></span>
+                </div>
+                <% unless last_admin %>
+                  <details class="group">
+                    <summary class="<%= secondary_button %> list-none [&::-webkit-details-marker]:hidden">Remove</summary>
+                    <div class="mt-2 rounded-lg border border-n-weak bg-n-solid-2 p-3 text-sm">
+                      <p class="text-n-slate-12">Remove <%= @user.name %> from <%= account.name %>?</p>
+                      <p class="mt-1 text-xs text-n-slate-11">They lose access to this client right away. Their conversations there become unassigned.</p>
+                      <%= button_to 'Yes, remove', membership_super_admin_wadesk_user_path(@user, account_user), method: :delete,
+                                                   class: "mt-2.5 #{danger_button}", form: { class: 'inline' } %>
+                    </div>
+                  </details>
+                <% end %>
+              </div>
+              <% if last_admin %>
+                <p class="mt-1 text-xs text-n-slate-11" data-last-admin>
+                  Only administrator of <%= account.name %>, so they can't be removed: a client always needs an administrator. Add another administrator first.
+                </p>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+
+      <div class="border-t border-n-weak px-4 py-4 sm:px-5">
+        <h3 class="text-sm font-medium text-n-slate-12">Add to a client</h3>
+        <% if @available_clients.empty? %>
+          <p class="mt-1 text-sm text-n-slate-10">This user already belongs to every client.</p>
+        <% else %>
+          <%= form_with scope: :membership, url: memberships_super_admin_wadesk_user_path(@user), method: :post, local: true,
+                        class: 'mt-2 flex flex-wrap items-end gap-3' do |f| %>
+            <div class="min-w-0 flex-[1_1_12rem]">
+              <%= f.label :account_id, 'Client', class: 'mb-1 block text-xs font-medium text-n-slate-11' %>
+              <%= f.select :account_id, @available_clients.map { |account| [account.name, account.id] }, {}, class: input_class, required: true %>
+            </div>
+            <fieldset class="min-w-0">
+              <legend class="mb-1 block text-xs font-medium text-n-slate-11">Role</legend>
+              <div class="flex gap-3 py-1.5 text-sm">
+                <% { 'administrator' => 'Administrator', 'agent' => 'Agent' }.each do |role, label| %>
+                  <label class="inline-flex items-center gap-1.5 text-n-slate-12">
+                    <%= f.radio_button :role, role, checked: role == 'agent' %> <%= label %>
+                  </label>
+                <% end %>
+              </div>
+            </fieldset>
+            <%= f.submit 'Add to client', name: nil, class: primary_button %>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="operator-title">
+      <div class="<%= panel_head %>">
+        <h2 id="operator-title" class="text-sm font-semibold text-n-slate-12">Operator access</h2>
+        <p class="mt-0.5 text-xs text-n-slate-11">
+          Operators run this console: they see and change every client's plan and features, every WhatsApp number and every user,
+          including setting passwords and making other operators. Being an operator does not open a client's inbox; add them to the client for that.
+        </p>
+      </div>
+      <div class="px-4 py-4 text-sm sm:px-5" data-operator-access>
+        <% if !operator %>
+          <p class="text-n-slate-11"><%= @user.name %> is not an operator.</p>
+          <% unless @user.confirmed? %>
+            <p class="mt-1 text-xs text-n-slate-11">They can only log in to the console after confirming their email.</p>
+          <% end %>
+          <details class="mt-2.5">
+            <summary class="<%= secondary_button %> inline-block list-none [&::-webkit-details-marker]:hidden">Make operator</summary>
+            <div class="mt-2 rounded-lg border border-n-weak bg-n-solid-2 p-3">
+              <p class="text-n-slate-12">Give <%= @user.name %> full access to this console?</p>
+              <%= button_to 'Yes, make operator', operator_super_admin_wadesk_user_path(@user), method: :patch, params: { operator: '1' },
+                                                  class: "mt-2.5 #{primary_button}", form: { class: 'inline' } %>
+            </div>
+          </details>
+        <% elsif own_account %>
+          <p class="text-n-slate-11">This is you. You can't remove your own operator access; another operator can.</p>
+        <% elsif @operator_count <= 1 %>
+          <p class="text-n-slate-11"><%= @user.name %> is the only operator. There must always be at least one operator.</p>
+        <% else %>
+          <p class="text-n-slate-11"><%= @user.name %> is an operator.</p>
+          <details class="mt-2.5">
+            <summary class="<%= secondary_button %> inline-block list-none [&::-webkit-details-marker]:hidden">Remove operator access</summary>
+            <div class="mt-2 rounded-lg border border-n-weak bg-n-solid-2 p-3">
+              <p class="text-n-slate-12">Remove <%= @user.name %>'s access to this console? Their access to clients stays as it is.</p>
+              <%= button_to 'Yes, remove operator access', operator_super_admin_wadesk_user_path(@user), method: :patch, params: { operator: '0' },
+                                                           class: "mt-2.5 #{danger_button}", form: { class: 'inline' } %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+    </section>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="details-title">
+      <div class="<%= panel_head %>">
+        <h2 id="details-title" class="text-sm font-semibold text-n-slate-12">Details</h2>
+      </div>
+      <dl class="grid grid-cols-1 gap-x-3 gap-y-2 px-4 py-4 text-sm sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5" data-user-details>
+        <dt class="text-n-slate-10">Email</dt>
+        <dd class="break-all"><%= @user.email %></dd>
+        <dt class="text-n-slate-10">Invitation</dt>
+        <dd>
+          <% if @user.confirmed? %>
+            Accepted <%= @user.confirmed_at.strftime('%-d %b %Y') %>
+          <% elsif @user.confirmation_sent_at %>
+            Pending, sent <%= time_ago_in_words(@user.confirmation_sent_at) %> ago
+          <% else %>
+            Pending
+          <% end %>
+        </dd>
+        <dt class="text-n-slate-10">Last sign-in</dt>
+        <dd><%= @user.last_sign_in_at ? "#{time_ago_in_words(@user.last_sign_in_at)} ago" : 'Never' %></dd>
+        <dt class="text-n-slate-10">Sign-ins</dt>
+        <dd class="tabular-nums"><%= @user.sign_in_count %></dd>
+        <dt class="text-n-slate-10">Two-factor</dt>
+        <dd><%= @user.otp_required_for_login? ? 'On' : 'Off' %></dd>
+        <dt class="text-n-slate-10">Created</dt>
+        <dd><%= @user.created_at.strftime('%-d %b %Y') %></dd>
+      </dl>
+      <% unless @user.confirmed? %>
+        <div class="flex flex-col gap-2.5 border-t border-n-weak px-4 py-4 text-sm sm:px-5" data-invitation-actions>
+          <p class="text-n-slate-11">
+            <%= @user.name %> has not accepted the invitation yet, so they can't log in. Send the email again, or confirm the address yourself
+            if you know it is theirs (then set a password below).
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <%= button_to 'Resend invitation', resend_confirmation_super_admin_wadesk_user_path(@user), method: :post, class: primary_button %>
+            <%= button_to 'Mark email as confirmed', confirm_super_admin_wadesk_user_path(@user), method: :post, class: secondary_button %>
+          </div>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="password-title">
+      <div class="<%= panel_head %>">
+        <h2 id="password-title" class="text-sm font-semibold text-n-slate-12">Set a new password</h2>
+        <p id="password-rules" class="mt-0.5 text-xs text-n-slate-11"><%= password_rules %> Tell the user their new password yourself; no email is sent.</p>
+      </div>
+      <%= form_with scope: :user, url: password_super_admin_wadesk_user_path(@user), method: :patch, local: true,
+                    class: 'flex flex-col gap-3 px-4 py-4 sm:px-5' do |f| %>
+        <% if @password_errors.present? %>
+          <ul id="password-errors" class="rounded-lg bg-n-ruby-3 px-3 py-2 text-sm text-n-ruby-11" role="alert" data-field-error>
+            <% @password_errors.each do |message| %><li><%= message %></li><% end %>
+          </ul>
+        <% end %>
+        <% describedby = ['password-rules', ('password-errors' if @password_errors.present?)].compact.join(' ') %>
+        <div>
+          <%= f.label :password, 'New password', class: 'mb-1 block text-xs font-medium text-n-slate-11' %>
+          <%= f.password_field :password, autocomplete: 'new-password', required: true, class: input_class,
+                                          'aria-describedby': describedby, 'aria-invalid': (@password_errors.present? ? true : nil) %>
+        </div>
+        <div>
+          <%= f.label :password_confirmation, 'Repeat the new password', class: 'mb-1 block text-xs font-medium text-n-slate-11' %>
+          <%= f.password_field :password_confirmation, autocomplete: 'new-password', required: true, class: input_class,
+                                                       'aria-invalid': (@password_errors.present? ? true : nil) %>
+        </div>
+        <div><%= f.submit 'Save password', name: nil, class: primary_button %></div>
+      <% end %>
+    </section>
+  </div>
+</div>

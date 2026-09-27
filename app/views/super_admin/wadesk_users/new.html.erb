@@ -1,0 +1,57 @@
+<%# WaDesk: invite a new user to a client (CR-004). Uses Chatwoot's AgentBuilder, which emails them an invitation. %>
+<% content_for(:title) { 'New user' } %>
+<% focus_ring = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand' %>
+<% input_class = 'w-full rounded-lg border border-n-weak bg-n-alpha-2 px-2.5 py-1.5 text-sm text-n-slate-12 outline-none focus:outline focus:outline-2 focus:outline-n-brand' %>
+<% label_class = 'mb-1 block text-xs font-medium text-n-slate-11' %>
+
+<%= render 'super_admin/wadesk_console/page_header',
+           title: 'New user',
+           description: 'Add someone to a client. They get an email invitation to set their password and log in.',
+           back_path: super_admin_wadesk_users_path, back_label: 'Users' %>
+
+<section class="max-w-xl rounded-xl border border-n-weak bg-n-solid-1" aria-label="New user">
+  <% if @clients.empty? %>
+    <p class="px-4 py-4 text-sm text-n-slate-11 sm:px-5">Add a client first; every user belongs to a client.</p>
+  <% else %>
+    <%= form_with scope: :user, url: super_admin_wadesk_users_path, method: :post, local: true, class: 'flex flex-col gap-3.5 px-4 py-4 sm:px-5' do |f| %>
+      <% if @error %>
+        <div id="new-user-error" class="rounded-lg bg-n-ruby-3 px-3 py-2 text-sm text-n-ruby-11" role="alert" data-field-error>
+          <%= @error %>
+          <% if @existing_user %>
+            <%= link_to "Open #{@existing_user.name}", super_admin_wadesk_user_path(@existing_user), class: "font-medium underline #{focus_ring}" %>
+          <% end %>
+        </div>
+      <% end %>
+      <div>
+        <%= f.label :name, 'Name', class: label_class %>
+        <%= f.text_field :name, value: @new_user['name'], required: true, autocomplete: 'off', class: input_class %>
+      </div>
+      <div>
+        <%= f.label :email, 'Email', class: label_class %>
+        <%= f.email_field :email, value: @new_user['email'], required: true, autocomplete: 'off', class: input_class,
+                                  'aria-describedby': (@error ? 'new-user-error' : nil) %>
+      </div>
+      <div>
+        <%= f.label :account_id, 'Client', class: label_class %>
+        <%= f.select :account_id, @clients.map { |account| [account.name, account.id] }, { selected: @new_user['account_id'] }, class: input_class, required: true %>
+      </div>
+      <fieldset>
+        <legend class="<%= label_class %>">Role</legend>
+        <div class="flex gap-4 text-sm">
+          <% { 'administrator' => 'Administrator', 'agent' => 'Agent' }.each do |role, label| %>
+            <label class="inline-flex items-center gap-1.5 text-n-slate-12">
+              <%= f.radio_button :role, role, checked: @new_user['role'] == role %> <%= label %>
+            </label>
+          <% end %>
+        </div>
+        <p class="mt-1 text-xs text-n-slate-11">Administrators manage the client's inboxes, agents and settings. Agents answer chats.</p>
+      </fieldset>
+      <div class="flex flex-wrap gap-2">
+        <%= f.submit 'Send invitation', name: nil,
+                                        class: "cursor-pointer rounded-lg border border-n-brand bg-n-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 #{focus_ring}" %>
+        <%= link_to 'Cancel', super_admin_wadesk_users_path,
+                    class: "rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-2 #{focus_ring}" %>
+      </div>
+    <% end %>
+  <% end %>
+</section>
