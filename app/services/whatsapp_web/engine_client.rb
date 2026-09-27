@@ -24,6 +24,7 @@ class WhatsappWeb::EngineClient
 
   TIMEOUT_SECONDS = 10
   SEND_TIMEOUT_SECONDS = 60 # uploads of large files
+  HEALTH_TIMEOUT_SECONDS = 3 # the operator's System health page must never hang on the engine
 
   def upsert_session(channel)
     request(:put, "/sessions/#{channel.id}", {
@@ -54,6 +55,16 @@ class WhatsappWeb::EngineClient
     request(:delete, "/sessions/#{channel_id}")
   rescue Error => e
     raise unless e.code == 'session_not_found'
+  end
+
+  # The engine's unauthenticated liveness check: :ok, :database_down (engine up, its database not) or :unhealthy.
+  # Network failures (refused, timeout, DNS) raise, so the caller can tell "not answering" from "answering badly".
+  def health
+    response = HTTParty.get("#{ENV.fetch('WADESK_ENGINE_URL')}/health", timeout: HEALTH_TIMEOUT_SECONDS)
+    body = response.parsed_response.is_a?(Hash) ? response.parsed_response : {}
+    return :ok if response.success? && body['status'] == 'ok'
+
+    body['database'] == 'down' ? :database_down : :unhealthy
   end
 
   private

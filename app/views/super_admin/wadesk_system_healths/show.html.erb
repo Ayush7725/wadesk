@@ -1,3 +1,75 @@
+<%# WaDesk: System health — one banner, then one card per part of the installation, in plain words (CR-004). %>
 <% content_for(:title) { 'System health' } %>
+<% labels = { ok: 'Running', warn: 'Needs a look', bad: 'Not working' } %>
+<% about = {
+     app: 'The WaDesk app your clients and you sign in to.',
+     database: 'Where everything is stored.',
+     redis: 'Fast memory for the job queue and live updates.',
+     whatsapp_engine: 'The service that links phones by QR code and carries WhatsApp Web messages.',
+     email: 'Invitations, password resets and notification emails.',
+     background_jobs: 'Work the server does behind the scenes: sending messages and emails, talking to WhatsApp.'
+   } %>
 
-<%= render 'super_admin/wadesk_console/page_header', title: 'System health', description: "Whether every part of WaDesk is running, in plain words." %>
+<%= render 'super_admin/wadesk_console/page_header', title: 'System health',
+                                                    description: 'Whether every part of WaDesk is running, in plain words. Reload the page to check again.' %>
+
+<% if @health.healthy? %>
+  <section class="mb-4 flex items-start gap-3 rounded-xl border border-n-teal-6 bg-n-teal-3 px-4 py-4 text-n-teal-11" role="status" data-banner="ok">
+    <span class="mt-1.5 size-2.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
+    <div>
+      <h2 class="text-base font-semibold">Everything is running</h2>
+      <p class="text-sm">All parts of WaDesk answered normally just now.</p>
+    </div>
+  </section>
+<% else %>
+  <% attention = @health.needing_attention %>
+  <% broken = attention.any? { |check| check.status == :bad } %>
+  <section class="mb-4 flex items-start gap-3 rounded-xl border px-4 py-4 <%= broken ? 'border-n-ruby-6 bg-n-ruby-3 text-n-ruby-11' : 'border-n-amber-6 bg-n-amber-3 text-n-amber-11' %>"
+           role="alert" data-banner="attention">
+    <span class="mt-1.5 size-2.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
+    <div class="min-w-0">
+      <h2 class="text-base font-semibold">
+        <%= attention.one? ? '1 part needs attention' : "#{attention.size} parts need attention" %>: <%= attention.map(&:title).to_sentence %>
+      </h2>
+      <ul class="mt-1 list-disc ps-5 text-sm">
+        <% attention.each do |check| %>
+          <li><%= check.summary %></li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
+<% end %>
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <% @health.checks.each do |check| %>
+    <section class="flex flex-col gap-2 rounded-xl border border-n-weak bg-n-solid-1 p-4 sm:p-5" aria-labelledby="check-<%= check.key %>"
+             data-check="<%= check.key %>" data-status="<%= check.status %>">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 id="check-<%= check.key %>" class="text-sm font-semibold text-n-slate-12"><%= check.title %></h2>
+          <p class="text-xs text-n-slate-10"><%= about[check.key] %></p>
+        </div>
+        <%= console_pill(labels.fetch(check.status), check.status) %>
+      </div>
+      <p class="text-sm text-n-slate-12"><%= check.summary %></p>
+      <% check.details.each do |detail| %>
+        <p class="text-xs text-n-slate-11 tabular-nums"><%= detail %></p>
+      <% end %>
+      <% if check.numbers %>
+        <p class="text-xs text-n-slate-11 tabular-nums" data-numbers>
+          <%= pluralize(check.numbers[:connected], 'number') %> connected ·
+          <% if check.numbers[:needing_attention].positive? %>
+            <%= link_to "#{check.numbers[:needing_attention]} need#{'s' if check.numbers[:needing_attention] == 1} attention",
+                        super_admin_whatsapp_web_numbers_path(filter: 'attention'),
+                        class: 'rounded font-medium text-n-ruby-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+          <% else %>
+            none need attention
+          <% end %>
+          ·
+          <%= link_to 'See all numbers', super_admin_whatsapp_web_numbers_path,
+                      class: 'rounded font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand' %>
+        </p>
+      <% end %>
+    </section>
+  <% end %>
+</div>
