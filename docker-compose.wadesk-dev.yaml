@@ -15,6 +15,9 @@ x-env: &env
   WADESK_ENGINE_API_TOKEN: wadesk-dev-engine-api-token-not-for-production
   WADESK_ENGINE_CALLBACK_BASE_URL: http://web:3000
   WADESK_ENGINE_WEBHOOK_SECRET: wadesk-dev-webhook-secret-not-for-production
+  # Emails (e.g. "WhatsApp connection expired") go to the Mailpit catcher: http://localhost:8025
+  SMTP_ADDRESS: mailpit
+  SMTP_PORT: '1025'
   # Keep pnpm's package cache in a volume instead of the repo (pnpm defaults to the mount root).
   npm_config_store_dir: /pnpm-store
 
@@ -78,6 +81,16 @@ services:
     command: bin/vite dev
     ports: ['127.0.0.1:3036:3036']
     depends_on: []
+
+  # Catches every email Chatwoot sends in development; read them at http://localhost:8025.
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.27
+    profiles: [app, prebuilt]
+    environment:
+      # Chatwoot sends a (blank) login whenever SMTP_USERNAME is set, even to ''; accept it like MailHog did.
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+    ports: ['127.0.0.1:8025:8025']
 
   # Internal WhatsApp Web engine, with reload on change. Published on 127.0.0.1:4400 for local curl testing only.
   engine:
