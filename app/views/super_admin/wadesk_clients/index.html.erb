@@ -1,65 +1,107 @@
-<% content_for(:title) do %>WaDesk Clients<% end %>
+<% content_for(:title) do %>Clients<% end %>
+<% default_limit = Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT %>
 
-<header class="main-content__header" role="banner">
-  <h1 class="main-content__page-title" id="page-title">WaDesk Clients</h1>
-  <%= form_with url: super_admin_wadesk_clients_path, method: :get, local: true, class: 'flex gap-2 items-center' do |f| %>
-    <%= f.search_field :search, value: @search, placeholder: 'Account name or ID', class: 'border border-slate-100 p-1.5 rounded-md w-64' %>
-    <%= f.submit 'Search', name: nil, class: 'border border-slate-200 bg-slate-50 px-3 py-1.5 rounded-md cursor-pointer' %>
-  <% end %>
-</header>
+<%= render 'super_admin/wadesk_console/page_header',
+           title: 'Clients',
+           description: 'Each client\'s plan decides which WhatsApp inboxes it can add. Turning a plan off keeps existing inboxes working.' %>
 
-<section class="main-content__body">
-  <p class="text-sm text-slate-600 mb-6">
-    Each client's plan decides which WhatsApp inboxes it can create. Turning a plan off keeps existing inboxes working;
-    only new ones of that type are blocked.
-  </p>
+<section class="rounded-xl border border-n-weak bg-n-solid-1" aria-labelledby="clients-table-title">
+  <h2 id="clients-table-title" class="sr-only">Client list</h2>
+  <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-n-weak px-3.5 py-3">
+    <%= form_with url: super_admin_wadesk_clients_path, method: :get, local: true, role: 'search',
+                  class: 'flex min-w-0 max-w-sm flex-[1_1_14rem] items-center gap-2 rounded-lg border border-n-weak bg-n-solid-2 px-2.5 py-1.5 focus-within:outline focus-within:outline-2 focus-within:outline-n-brand' do |f| %>
+      <svg class="size-4 flex-none text-n-slate-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <%= f.label :search, 'Search clients', class: 'sr-only' %>
+      <%= f.search_field :search, value: @search, placeholder: 'Search by name or ID',
+                                  class: 'w-full min-w-0 border-0 bg-transparent p-0 text-sm text-n-slate-12 outline-none placeholder:text-n-slate-10 focus:ring-0' %>
+      <% if @plan_filter != 'all' %>
+        <%= hidden_field_tag :plan, @plan_filter, id: nil %>
+      <% end %>
+      <%= f.submit 'Search', name: nil, class: 'sr-only focus:not-sr-only focus:rounded focus:px-2 focus:text-sm' %>
+    <% end %>
 
-  <% if @accounts.empty? %>
-    <p class="text-sm text-slate-600">No accounts found.</p>
-  <% else %>
-    <table class="w-full text-sm border border-slate-100 rounded-md" aria-labelledby="page-title">
-      <thead class="text-left text-xs text-slate-500 bg-slate-25">
-        <tr>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">ID</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Name</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Status</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">WhatsApp Official</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">WhatsApp Web</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Web daily new chats</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Official inboxes</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4">Web inboxes</th>
-          <th class="px-3 py-2 first:!pl-4 last:!pr-4"></th>
+    <nav class="flex flex-wrap gap-0.5 rounded-lg border border-n-weak bg-n-solid-2 p-0.5" aria-label="Filter by plan">
+      <% SuperAdmin::WadeskClientsController::PLAN_FILTERS.each do |filter, label| %>
+        <% current = filter == @plan_filter %>
+        <%= link_to super_admin_wadesk_clients_path(search: @search.presence, plan: (filter == 'all' ? nil : filter)),
+                    'aria-current': (current ? 'page' : nil), data: { plan_filter: filter },
+                    class: "rounded-md px-2.5 py-1 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand #{current ? 'bg-n-solid-1 text-n-slate-12 shadow-sm' : 'text-n-slate-11 hover:text-n-slate-12'}" do %>
+          <%= label %> <span class="tabular-nums text-n-slate-10"><%= @plan_counts[filter] %></span>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[760px] text-sm" aria-labelledby="clients-table-title">
+      <thead>
+        <tr class="border-b border-n-weak text-start text-xs font-medium text-n-slate-10">
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Client</th>
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Status</th>
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Plan</th>
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Web daily new chats</th>
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">WhatsApp Web numbers</th>
+          <th scope="col" class="whitespace-nowrap px-3.5 py-2.5 text-start font-medium">Official inboxes</th>
+          <th scope="col" class="px-3.5 py-2.5"><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
       <tbody>
         <% @accounts.each do |account| %>
+          <% official = account.feature_enabled?('whatsapp_official') %>
+          <% web = account.feature_enabled?('whatsapp_web') %>
           <% limit = account.custom_attributes[SuperAdmin::WadeskClientsController::LIMIT_KEY] %>
-          <tr class="border-t border-slate-100 align-middle" data-account-id="<%= account.id %>">
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.id %></td>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.name %></td>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= account.status %></td>
-            <% SuperAdmin::WadeskClientsController::PLAN_FEATURES.each_key do |feature| %>
-              <td class="px-3 py-2 first:!pl-4 last:!pr-4">
-                <% if account.feature_enabled?(feature) %>
-                  <span class="text-green-700">On</span>
-                <% else %>
-                  <span class="text-slate-400">Off</span>
-                <% end %>
-              </td>
-            <% end %>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4">
-              <%= limit.presence || "#{Wadesk::Safety::NewChatLimit::DEFAULT_DAILY_LIMIT} (default)" %>
+          <% attention = @inbox_counts['attention'][account.id].to_i %>
+          <tr class="relative border-b border-n-weak last:border-b-0 hover:bg-n-alpha-1" data-account-id="<%= account.id %>">
+            <td class="px-3.5 py-3" data-column="client">
+              <span class="block font-medium text-n-slate-12"><%= account.name %></span>
+              <span class="block text-xs text-n-slate-10">#<%= account.id %></span>
             </td>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= @inbox_counts['whatsapp_official'][account.id].to_i %></td>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4"><%= @inbox_counts['whatsapp_web'][account.id].to_i %></td>
-            <td class="px-3 py-2 first:!pl-4 last:!pr-4">
-              <%= link_to 'Edit plan', edit_super_admin_wadesk_client_path(account), class: 'action-edit' %>
+            <td class="px-3.5 py-3" data-column="status">
+              <%= account.active? ? console_pill('Active', :ok) : console_pill('Suspended', :mute) %>
             </td>
+            <td class="px-3.5 py-3" data-column="plan">
+              <% if official || web %>
+                <span class="inline-flex flex-wrap gap-1">
+                  <% if official %><span class="rounded-md bg-n-blue-3 px-2 py-0.5 text-xs font-semibold text-n-blue-11">Official</span><% end %>
+                  <% if web %><span class="rounded-md bg-n-teal-3 px-2 py-0.5 text-xs font-semibold text-n-teal-11">Web</span><% end %>
+                </span>
+              <% else %>
+                <span class="rounded-md border border-n-weak bg-n-solid-2 px-2 py-0.5 text-xs font-semibold text-n-slate-11">No WhatsApp</span>
+              <% end %>
+            </td>
+            <td class="px-3.5 py-3 tabular-nums" data-column="limit">
+              <% if !web %>
+                <span class="text-n-slate-10" aria-label="Not on the WhatsApp Web plan">—</span>
+              <% elsif limit.present? %>
+                <%= limit %>
+              <% else %>
+                <%= default_limit %> <span class="text-n-slate-10">default</span>
+              <% end %>
+            </td>
+            <td class="px-3.5 py-3 tabular-nums" data-column="numbers">
+              <span class="inline-flex flex-wrap items-center gap-1.5">
+                <%= @inbox_counts['whatsapp_web'][account.id].to_i %>
+                <% if attention.positive? %><%= console_pill("#{attention} need attention", :bad) %><% end %>
+              </span>
+            </td>
+            <td class="px-3.5 py-3 tabular-nums" data-column="official"><%= @inbox_counts['whatsapp_official'][account.id].to_i %></td>
+            <td class="px-3.5 py-3 text-end">
+              <%# The link covers the whole row, so clicking anywhere on it opens the client page. %>
+              <%= link_to 'Manage', edit_super_admin_wadesk_client_path(account), 'aria-label': "Manage #{account.name}",
+                          class: 'inline-flex rounded-lg border border-n-weak bg-n-solid-1 px-3 py-1.5 font-medium text-n-slate-12 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand after:absolute after:inset-0' %>
+            </td>
+          </tr>
+        <% end %>
+        <% if @accounts.empty? %>
+          <tr>
+            <td colspan="7" class="px-3.5 py-7 text-center text-n-slate-11">No client matches this search.</td>
           </tr>
         <% end %>
       </tbody>
     </table>
-  <% end %>
-
-  <%= paginate @accounts %>
+  </div>
 </section>
+
+<div class="mt-4">
+  <%= paginate @accounts %>
+</div>
