@@ -1,0 +1,8 @@
+<%# WaDesk: operator console navigation on small screens. %>
+<nav class="md:hidden sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-n-weak bg-n-solid-1 px-4 py-2.5" aria-label="Operator console">
+  <% (console_nav_links + console_advanced_links.first(1)).each do |link| %>
+    <%= link_to link[:label], link[:url],
+                class: "flex-none rounded-lg px-2.5 py-1.5 text-sm font-medium #{link[:active] ? 'bg-n-blue-3 text-n-blue-11' : 'text-n-slate-11'}",
+                'aria-current': (link[:active] ? 'page' : nil) %>
+  <% end %>
+</nav>

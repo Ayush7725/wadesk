@@ -1,0 +1,35 @@
+<%# WaDesk: layout of the operator console (ADR-0008). Uses the client dashboard's colour tokens (n-*) in light and dark. %>
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= content_for(:title) %> · WaDesk Operator Console</title>
+  <script>
+    // Follow the operating system's light or dark setting, like the client dashboard's "system" theme.
+    (function () {
+      var dark = window.matchMedia('(prefers-color-scheme: dark)');
+      var apply = function () { document.documentElement.classList.toggle('dark', dark.matches); };
+      apply();
+      dark.addEventListener('change', apply);
+    })();
+  </script>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag 'superadmin' %>
+  <%= csrf_meta_tags %>
+</head>
+<body class="h-full antialiased bg-n-background text-n-slate-12 font-inter">
+  <%= render 'super_admin/application/icons' %>
+  <div class="flex min-h-full">
+    <%= render 'super_admin/wadesk_console/sidebar' %>
+    <div class="flex-1 min-w-0">
+      <%= render 'super_admin/wadesk_console/topbar' %>
+      <main class="px-4 md:px-8 pt-6 pb-12 max-w-7xl" role="main">
+        <%= render 'super_admin/wadesk_console/flashes' %>
+        <%= yield %>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

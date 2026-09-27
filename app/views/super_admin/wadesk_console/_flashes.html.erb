@@ -1,0 +1,6 @@
+<%# WaDesk: success and error messages after a form submit. %>
+<% { notice: 'bg-n-teal-3 text-n-teal-11', error: 'bg-n-ruby-3 text-n-ruby-11', alert: 'bg-n-ruby-3 text-n-ruby-11' }.each do |type, classes| %>
+  <% if flash[type].present? %>
+    <div class="mb-5 rounded-lg px-4 py-2.5 text-sm font-medium <%= classes %>" role="status"><%= flash[type] %></div>
+  <% end %>
+<% end %>
