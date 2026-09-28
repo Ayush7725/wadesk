@@ -17,7 +17,7 @@ reply to text, media and replies from the shared inbox, with delivery/read ticks
 **In scope (Step 1):** connecting/disconnecting a number, 1:1 chats, text, media, reply-to, delivery status,
 per-account enablement, reliability across restarts.
 
-**Out of scope (later steps):** groups, Status posting, polls/reactions/stickers sending, number checker, profile
+**Out of scope (later steps):** groups, Status posting, polls/reactions/stickers sending, single-number checker (no bulk checks), profile
 editing, call auto-reject, history import, voice-note transcription, billing/plans UI, rebranding. The design
 must not block these.
 
