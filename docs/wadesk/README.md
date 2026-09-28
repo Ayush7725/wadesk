@@ -90,7 +90,7 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 
 ## Local development
 
-Everything runs in containers; nothing but Docker/Podman is needed on the laptop. `bin/wadesk-dev` wraps
+Everything runs in containers; nothing but Docker/Podman is needed on the laptop. Development runs with `DISABLE_ENTERPRISE=true`, like production, which ships without Chatwoot's `enterprise/` code (licence; see the [enterprise audit](05-enterprise-feature-audit.md)). `bin/wadesk-dev` wraps
 `docker-compose.wadesk-dev.yaml` (Ruby 3.4.4, Node 24, pnpm 10 toolbox + Postgres + Redis, no host ports except the
 dev server). On Fedora it uses the rootless Podman socket automatically.
 

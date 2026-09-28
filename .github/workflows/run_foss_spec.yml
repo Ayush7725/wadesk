@@ -144,7 +144,8 @@ jobs:
             bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json $TESTS
           fi
         env:
-          NODE_OPTIONS: --openssl-legacy-provider
+          # WaDesk: specs that render full pages build the frontend on first use; it needs a larger heap (#42).
+          NODE_OPTIONS: --max-old-space-size=6144 --openssl-legacy-provider
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

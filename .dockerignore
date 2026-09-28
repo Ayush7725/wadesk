@@ -15,3 +15,6 @@ vendor/bundle
 .DS_Store
 *.swp
 *~
+# WaDesk: Chatwoot's enterprise/ code may only run in production with a Chatwoot licence (docs/wadesk/05-enterprise-feature-audit.md).
+enterprise
+spec/enterprise

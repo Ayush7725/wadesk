@@ -96,6 +96,9 @@ extend), *Independent* (WaDesk writes the backend; reuses MIT screens/tables whe
 1. **P0 — Run without enterprise.** Production image without `enterprise/`; boot and rake tasks tolerate its absence;
    unguarded enterprise routes removed or guarded; views fall back to MIT templates; the full CE spec suite and the
    WaDesk suites green without it. Required by the licence; also stops the nightly branding reset.
+   *Done in the P0 PR: `.dockerignore` excludes `enterprise/`; `config/application.rb` loads enterprise paths, views
+   and initializers only when enabled (so `DISABLE_ENTERPRISE`, set in development, behaves like production); routes to
+   enterprise-only controllers are guarded; production-mode boot with `enterprise/` removed is checked.*
 2. **Rebrand**, done through the white-label settings wherever possible (installation name, brand name, logos, links,
    email sender), with code changes only where a setting doesn't exist (hard-coded texts, emails, icons).
 3. Clean-room WaDesk versions of enterprise features, in this order:

@@ -101,6 +101,7 @@ Every edit to an existing Chatwoot file is listed here and kept minimal.
 | `config/routes.rb` (super_admin), `app/views/super_admin/application/_navigation.html.erb` | *WhatsApp Web numbers* page in Super Admin (WW-FR-31): route, nav entry, and a skip in the automatic resource nav loop (custom page, no Administrate dashboard) |
 | `config/routes.rb` (super_admin root), `app/views/super_admin/application/_navigation.html.erb` | Super Admin's home is the WaDesk operator console; Chatwoot's dashboard moves to `/super_admin/chatwoot` and its nav links back to the console (ADR-0008) |
 | `app/javascript/dashboard/assets/scss/super_admin/index.scss` | Imports the dashboard's full colour tokens (`next-colors`) instead of a partial copy, so the console's `n-*` colours render in light and dark |
+| `config/application.rb`, `config/routes.rb`, `.dockerignore` | Run without Chatwoot's enterprise code (licence): enterprise paths, views and initializers load only when enabled; routes to enterprise-only controllers are guarded; the production image excludes `enterprise/` (P0, [enterprise audit](05-enterprise-feature-audit.md)) |
 | `docker-compose*.yaml`, `.env.example` | `wadesk-engine` service and its variables |
 | Campaign creation (controller/service for WhatsApp campaigns) | Reject `baileys` inboxes (SAFE-FR-01) — exact file identified in M3 |
 | `app/models/campaign.rb` | `include WhatsappWebCampaignGuard`: campaigns are rejected on WhatsApp Web inboxes (SAFE-FR-01) |

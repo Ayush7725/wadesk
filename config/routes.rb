@@ -78,46 +78,49 @@ Rails.application.routes.draw do
           end
           namespace :captain do
             resource :preferences, only: [:show, :update]
-            resources :assistants do
-              member do
-                post :playground
-                get :metrics
-                get :faq_stats
-                get :summary
-                get :drilldown
+            # WaDesk: the Captain assistant backend exists only in enterprise/ (not shipped); tasks and preferences are MIT.
+            if ChatwootApp.enterprise?
+              resources :assistants do
+                member do
+                  post :playground
+                  get :metrics
+                  get :faq_stats
+                  get :summary
+                  get :drilldown
+                end
+                resource :stats, only: [], controller: :assistant_stats do
+                  get :drilldown
+                  get :overview
+                  get :overview_summary
+                  get :resolution_flow
+                  get :resolution_trend
+                end
+                collection do
+                  get :tools
+                end
+                resources :inboxes, only: [:index, :create, :destroy], param: :inbox_id
+                resources :scenarios
               end
-              resource :stats, only: [], controller: :assistant_stats do
-                get :drilldown
-                get :overview
-                get :overview_summary
-                get :resolution_flow
-                get :resolution_trend
+              resources :agent_sessions, only: [:show]
+              resources :assistant_responses do
+                get :drilldown, on: :member
               end
-              collection do
-                get :tools
+              resources :faq_suggestions, only: [:index, :show, :update] do
+                post :approve, on: :member
+                post :dismiss, on: :member
               end
-              resources :inboxes, only: [:index, :create, :destroy], param: :inbox_id
-              resources :scenarios
-            end
-            resources :agent_sessions, only: [:show]
-            resources :assistant_responses do
-              get :drilldown, on: :member
-            end
-            resources :faq_suggestions, only: [:index, :show, :update] do
-              post :approve, on: :member
-              post :dismiss, on: :member
-            end
-            resources :message_reports, only: [:create]
-            resources :bulk_actions, only: [:create]
-            resources :copilot_threads, only: [:index, :create] do
-              resources :copilot_messages, only: [:index, :create]
-            end
-            resources :custom_tools do
-              post :test, on: :collection
-            end
-            resources :documents, only: [:index, :show, :create, :destroy] do
-              post :sync, on: :member
-              get :drilldown, on: :member
+              resources :message_reports, only: [:create]
+              resources :bulk_actions, only: [:create]
+              resources :copilot_threads, only: [:index, :create] do
+                resources :copilot_messages, only: [:index, :create]
+              end
+              resources :custom_tools do
+                post :test, on: :collection
+              end
+              resources :documents, only: [:index, :show, :create, :destroy] do
+                post :sync, on: :member
+                get :drilldown, on: :member
+              end
             end
             resource :tasks, only: [], controller: 'tasks' do
               post :rewrite
@@ -127,7 +130,7 @@ Rails.application.routes.draw do
               post :follow_up
             end
           end
-          resource :saml_settings, only: [:show, :create, :update, :destroy]
+          resource :saml_settings, only: [:show, :create, :update, :destroy] if ChatwootApp.enterprise? # WaDesk: enterprise-only controller
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
             delete :avatar, on: :member
             post :reset_access_token, on: :member
@@ -139,7 +142,7 @@ Rails.application.routes.draw do
             end
           end
           resources :assignable_agents, only: [:index]
-          resource :audit_logs, only: [:show]
+          resource :audit_logs, only: [:show] if ChatwootApp.enterprise? # WaDesk: enterprise-only controller
           resources :callbacks, only: [] do
             collection do
               post :register_facebook_page
@@ -155,12 +158,15 @@ Rails.application.routes.draw do
           resources :macros, only: [:index, :create, :show, :update, :destroy] do
             post :execute, on: :member
           end
-          resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
-          resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
-          resources :agent_capacity_policies, only: [:index, :create, :show, :update, :destroy] do
-            scope module: :agent_capacity_policies do
-              resources :users, only: [:index, :create, :destroy]
-              resources :inbox_limits, only: [:create, :update, :destroy]
+          # WaDesk: these controllers exist only in enterprise/ (not shipped).
+          if ChatwootApp.enterprise?
+            resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
+            resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
+            resources :agent_capacity_policies, only: [:index, :create, :show, :update, :destroy] do
+              scope module: :agent_capacity_policies do
+                resources :users, only: [:index, :create, :destroy]
+                resources :inbox_limits, only: [:create, :update, :destroy]
+              end
             end
           end
           resources :campaigns, only: [:index, :create, :show, :update, :destroy] do
@@ -285,10 +291,12 @@ Rails.application.routes.draw do
               patch :update if ChatwootApp.enterprise?
             end
           end
-          resources :applied_slas, only: [:index] do
-            collection do
-              get :metrics
-              get :download
+          if ChatwootApp.enterprise? # WaDesk: enterprise-only controller
+            resources :applied_slas, only: [:index] do
+              collection do
+                get :metrics
+                get :download
+              end
             end
           end
           resources :reporting_events, only: [:index] if ChatwootApp.enterprise?
@@ -491,7 +499,7 @@ Rails.application.routes.draw do
       end
 
       # Frontend API endpoint to trigger SAML authentication flow
-      post 'auth/saml_login', to: 'auth#saml_login'
+      post 'auth/saml_login', to: 'auth#saml_login' if ChatwootApp.enterprise? # WaDesk: enterprise-only controller
 
       resource :profile, only: [:show, :update] do
         delete :avatar, on: :collection
@@ -739,7 +747,7 @@ Rails.application.routes.draw do
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'
-  get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify'
+  get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify' if ChatwootApp.enterprise? # WaDesk: enterprise-only
 
   # ----------------------------------------------------------------------
   # Internal Monitoring Routes

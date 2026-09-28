@@ -10,6 +10,8 @@ x-env: &env
   FRONTEND_URL: http://localhost:3300
   SECRET_KEY_BASE: wadesk-development-only-secret-key-base-not-for-production-use-0123456789abcdef
   ENABLE_ACCOUNT_SIGNUP: 'true'
+  # Like production, which ships without enterprise/ (licence): the enterprise code is neither loaded nor run.
+  DISABLE_ENTERPRISE: 'true'
   # WaDesk engine as seen from Chatwoot (development values).
   WADESK_ENGINE_URL: http://engine:4000
   WADESK_ENGINE_API_TOKEN: wadesk-dev-engine-api-token-not-for-production
