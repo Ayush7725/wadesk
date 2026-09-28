@@ -130,9 +130,9 @@ Test numbers: at least two spare SIMs/numbers reserved for development and soak 
 | **Operator screen for per-account settings** — now planned as S2.1 below (CR-002). | M3.5 | Step 2 (before the first paying client) |
 | **Run production without Chatwoot's enterprise code** (`DISABLE_ENTERPRISE=true` or no `enterprise/` in the image), as ADR-0001 assumes. Today `enterprise/` ships in the image; without a Chatwoot licence its daily `ReconcilePlanConfigService` resets all brand settings (name, logos, links) to Chatwoot's and switches premium features off. Until then the console shows branding read-only. Check what else the switch changes before go-live. | S2.3 (#55) | Staging setup, before the first paying client |
 
-## S2.1 — Operator screen and plan lock (CR-002, ADR-0008)
+## S2.1 — Operator screen and plan lock (CR-002, ADR-0008) ✅
 
-**Status:** in progress. Covers WW-FR-31, 32, 33 · SAFE-FR-02 (operator setting), SAFE-NFR-03
+**Status:** accepted 2026-09-28 ([record](acceptance/S2.1.md)). Covers WW-FR-31, 32, 33 · SAFE-FR-02 (operator setting), SAFE-NFR-03
 
 | Task | Output |
 |---|---|
@@ -146,7 +146,7 @@ on the numbers page. *Met in the browser test on 2026-09-27 (PRs #41–#45).*
 
 ## S2.2 — Operator console and feature switches (CR-003, ADR-0009)
 
-**Status:** in progress. Covers WW-FR-34 and the approved console design
+**Status:** built (PRs #46–#51); browser test in roadmap step 4. Covers WW-FR-34 and the approved console design
 
 | Task | Output |
 |---|---|
@@ -161,7 +161,7 @@ them. The console matches the approved mockup in light and dark mode and on a ph
 
 ## S2.3 — One operator console (CR-004, ADR-0009 amendment)
 
-**Status:** in progress. Covers WW-FR-35
+**Status:** built (PRs #53–#56); browser test in roadmap step 4. Covers WW-FR-35
 
 | Task | Output |
 |---|---|
@@ -172,6 +172,16 @@ them. The console matches the approved mockup in light and dark mode and on a ph
 
 **Acceptance:** in the browser, the operator creates a test client with its admin, suspends and reactivates it, adds a
 user to it, checks System health and changes an allowed setting, all without leaving the console's design.
+
+## Roadmap to release (agreed with the product owner, 2026-09-28)
+
+| Step | What | Notes |
+|---|---|---|
+| 1 | Record S2.1 acceptance | Done ([record](acceptance/S2.1.md)) |
+| 2 | Run without Chatwoot's enterprise code (P0), then the full rebrand via white-label settings | [Enterprise audit](05-enterprise-feature-audit.md) §5; then clean-room WaDesk versions of the approved enterprise features in the order agreed there |
+| 3 | All Evolution API features, one at a time | Each one planned, built and tested separately, within the safety layer (ADR-0006): nothing that sends bulk or unsolicited messages from WhatsApp Web |
+| 4 | Test every Chatwoot feature, and the operator console | A written checklist run in the browser; bugs fixed as they are found |
+| 5 | Server and release | Staging server, capacity and fault tests (M5.2, M5.3), 72-hour soak (M5.5), retire Evolution (M5.6), tag v0.1 |
 
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
