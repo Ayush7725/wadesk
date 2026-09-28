@@ -12,6 +12,7 @@ WhatsApp Web (QR-linked devices) from one codebase.
 | [02-architecture.md](02-architecture.md) | How it is built: components, contracts, data flows | Approved 2026-09-25 |
 | [03-delivery-plan.md](03-delivery-plan.md) | Milestones, tasks, acceptance criteria, test strategy | Approved 2026-09-25 |
 | [04-safety-requirements.md](04-safety-requirements.md) | WhatsApp Safety Layer requirements and phasing | Approved 2026-09-25 (CR-001) |
+| [05-enterprise-feature-audit.md](05-enterprise-feature-audit.md) | Chatwoot Enterprise features: inventory, licensing boundary, what WaDesk builds independently | Proposed 2026-09-28 |
 | [acceptance/](acceptance/) | Milestone acceptance records (Gate B) | M1, M2–M4, S2.1 |
 | [adr/](adr/) | Architecture Decision Records — one file per significant decision | See index below |
 
