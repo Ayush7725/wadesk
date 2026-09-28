@@ -1,6 +1,6 @@
 # Enterprise feature audit and plan
 
-**Status:** audit complete, plan proposed — awaiting product-owner approval · **Date:** 2026-09-28
+**Status:** approved by the product owner on 2026-09-28 (decisions in §7) · **Date:** 2026-09-28
 **Scope:** every feature in Chatwoot's `enterprise/` directory in the exact version WaDesk runs; what WaDesk needs;
 the licensing boundary; how WaDesk builds the needed features without using proprietary code.
 
@@ -34,9 +34,11 @@ the licensing boundary; how WaDesk builds the needed features without using prop
    an `enterprise?` guard still reach enterprise controllers. The production image must **not contain `enterprise/`**.
    Evidence that WaDesk runs without it: our CI job `backend-targeted` deletes `enterprise/` and `spec/enterprise/`
    before running the specs.
-2. **Enterprise-equivalent features are written by WaDesk.** Rules:
-   - Enterprise code may be read to understand *behaviour* (what a user can do, edge cases). It is never copied,
-     translated line by line, or used as a template for WaDesk code.
+2. **Enterprise-equivalent features are built clean-room by WaDesk** (product-owner decision, 2026-09-28):
+   - Inputs are **public documentation, observed behaviour and the MIT parts only**. Nobody implementing a feature reads
+     `enterprise/` code for it; enterprise code is never copied, translated or used as a template.
+   - This audit was the one-off inventory (which features exist, where the MIT/proprietary line runs). Its file lists
+     are for scoping, not for implementation.
    - Each feature is specified first in WaDesk's own words (requirements + API contract), then implemented from that
      specification in WaDesk-owned code (`app/**/wadesk/**` or clearly marked WaDesk files).
    - MIT parts are reused freely: screens, tables, migrations, API shapes the MIT frontend expects, base policies.
@@ -89,41 +91,53 @@ extend), *Independent* (WaDesk writes the backend; reuses MIT screens/tables whe
 | Branding / "Powered by" removal | Custom name and logos; hide "Powered by" | enterprise only *resets* it | enforcement is MIT | Yes | Already MIT once enterprise is gone; part of the rebrand | P1 (rebrand) |
 | Chatwoot billing (Stripe), cloud internals, hub sync | Chatwoot's own SaaS operations | `billing/*`, `internal/*` | — | No | Not needed (WaDesk has its own billing, Step 2) | — |
 
-## 5. Proposed plan (one feature at a time)
+## 5. Approved plan (one step at a time)
 
 1. **P0 — Run without enterprise.** Production image without `enterprise/`; boot and rake tasks tolerate its absence;
    unguarded enterprise routes removed or guarded; views fall back to MIT templates; the full CE spec suite and the
-   WaDesk suites green without it. Unblocks the rebrand (branding no longer reset) and is required by the licence.
-2. **P1 — Rebrand** (roadmap step 2), now possible.
-3. **P1 — Security configuration**: 2FA encryption keys, session limits, rate limits verified in staging.
-4. **P1 — Custom roles & permissions** (independent), then **audit logs** (independent). Every later feature writes to
-   the audit log and checks permissions through the same resolver.
-5. **P2** — SLA; advanced assignment; plan limits; WhatsApp campaign analytics with WaDesk campaigns; AI writing help
-   metering; voice-note transcription; CSAT review notes.
-6. **P3/P4** — agent schedules, device verification, required attributes, AI assistant, SAML, WhatsApp calling, IP lists.
+   WaDesk suites green without it. Required by the licence; also stops the nightly branding reset.
+2. **Rebrand**, done through the white-label settings wherever possible (installation name, brand name, logos, links,
+   email sender), with code changes only where a setting doesn't exist (hard-coded texts, emails, icons).
+3. Clean-room WaDesk versions of enterprise features, in this order:
+   1. **Security setup** — 2FA (encryption keys), session limits, rate limits: configure and verify.
+   2. **Voice-note transcription.**
+   3. **AI writing help** (reply suggestions, rewrite, summary): switch on, with usage limits per client.
+   4. **Audit logs.**
+   5. **Custom roles and permissions.**
+   6. **AI auto-reply bot with knowledge base** — needs a safety review for WhatsApp Web before it can answer there.
+   7. **WhatsApp campaign analytics** — Official only, inside the WaDesk campaign rules (ADR-0006).
+4. **Later:** SLA, smart assignment (capacity, least-busy), required conversation fields.
+5. **Skipped for now:** SAML SSO, WhatsApp / Twilio calling, conversation monitors, advanced search.
 
 Every feature follows the same definition of done (handbook rule 6) plus: backend + frontend + policy enforcement at
 the API; validation and error handling; tenant-isolation specs (a second account must never read or change the first
 account's data through any endpoint); regression runs of the affected CE suites; an end-to-end browser check; the
 provenance record.
 
-This ordering and the product boundary (ADR-0006: WhatsApp Web stays conversations-only; campaigns Official-only with
-opt-in, approval and audit) are recorded as a change request once approved.
+### Business and operating model (product-owner input, 2026-09-28)
+- **WaDesk is sold by the product owner as an individual, as a hosted service:** clients get logins to WaDesk; the
+  software itself is not distributed to them. Licensing and the lawyer review are framed around hosted use.
+- **Monthly sync with Chatwoot updates:** a `chore/upstream-sync-<version>` PR each month (merge commit, per the
+  handbook). Each sync re-checks that `enterprise/` stays out of the production image, reviews newly added upstream
+  enterprise features and MIT files for the inventory above, and re-runs the full suites and the smoke check.
+- **Rebrand through white-label settings wherever possible** (see step 2), so upstream syncs stay cheap.
 
 ## 6. Provenance record (template, one per feature PR)
 
 | Field | Content |
 |---|---|
 | Original Chatwoot feature | name, version 4.18.0 |
-| Enterprise paths studied | files read for behaviour only |
+| Sources used | public documentation (links), observed behaviour, MIT files (paths); `enterprise/` code not read for implementation |
 | MIT parts reused | e.g. table, migration, screens, API shape — with paths |
 | Code copied from `enterprise/` | **none** (any exception must be approved and justified in writing) |
 | WaDesk implementation paths | new files / changed files |
 | Behaviour differences | where WaDesk intentionally differs |
 | Licence note | MIT parts keep their notice; WaDesk code is WaDesk-owned |
 
-## 7. Decisions needed from the product owner
+## 7. Product-owner decisions (2026-09-28)
 
-1. Approve **P0: remove `enterprise/` from the production image** (required by the licence; also fixes the branding reset).
-2. Approve the **Needed / Priority** columns in §4 (change any "Later"/"No" you want sooner).
-3. Arrange a **lawyer review** of §2 before commercial launch.
+1. **P0 approved:** remove `enterprise/` from the production image and make WaDesk run fully without it; then the rebrand.
+2. **Priority order approved** as in §5 (it replaces the P columns in §4 where they differ).
+3. **Clean-room rule:** public docs and behaviour only; never copying `enterprise/` code (§2).
+4. **Lawyer review:** arranged by the product owner before the commercial launch.
+5. **Added to the plan:** hosted service sold by an individual; monthly upstream sync; rebrand via white-label settings.
