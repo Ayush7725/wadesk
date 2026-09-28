@@ -99,14 +99,25 @@ extend), *Independent* (WaDesk writes the backend; reuses MIT screens/tables whe
    WaDesk suites green without it. Required by the licence; also stops the nightly branding reset.
 2. **Rebrand**, done through the white-label settings wherever possible (installation name, brand name, logos, links,
    email sender), with code changes only where a setting doesn't exist (hard-coded texts, emails, icons).
-3. Clean-room WaDesk versions of enterprise features, in this order:
+3. **Build order after the rebrand** (product-owner decision, 2026-09-28; each item planned, built and tested on its
+   own, clean-room where it is an enterprise-style feature, and within the safety layer, ADR-0006):
    1. **Security setup** — 2FA (encryption keys), session limits, rate limits: configure and verify.
    2. **Voice-note transcription.**
-   3. **AI writing help** (reply suggestions, rewrite, summary): switch on, with usage limits per client.
-   4. **Audit logs.**
-   5. **Custom roles and permissions.**
-   6. **AI auto-reply bot with knowledge base** — needs a safety review for WhatsApp Web before it can answer there.
-   7. **WhatsApp campaign analytics** — Official only, inside the WaDesk campaign rules (ADR-0006).
+   3. **AI writing help** (reply suggestions, rewrite, summary) — switch on, with usage limits per client.
+   4. **Remaining WhatsApp Web message types** (e.g. location, contacts, stickers, reactions, polls — sending and receiving
+      where WhatsApp Web allows).
+   5. **Call auto-reject** for WhatsApp Web numbers (optional per inbox, with an auto-reply).
+   6. **Audit logs.**
+   7. **Custom roles and permissions.**
+   8. **Profile** — business profile of the linked number (name, photo, about).
+   9. **Status** — posting WhatsApp Status from the linked number.
+   10. **History import + labels** — import past chats on linking; sync WhatsApp labels.
+   11. **Single-number checker** — one number at a time, never bulk (§7).
+   12. **Proxy per number** — optional outbound proxy for each WhatsApp Web connection, so many clients' numbers do not
+       share one server address; its plan confirms this is not used to disguise automation (ADR-0006 point 3).
+   13. **Groups** — group conversations in the inbox.
+   14. **AI auto-reply bot with knowledge base** — only after the WhatsApp Web safety review.
+   15. **WhatsApp campaign analytics** — Official only, inside the WaDesk campaign rules.
 4. **Later:** SLA, smart assignment (capacity, least-busy), required conversation fields.
 5. **Skipped for now:** SAML SSO, WhatsApp / Twilio calling, conversation monitors, advanced search.
 
