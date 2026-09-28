@@ -173,6 +173,17 @@ jobs:
         run: rm -rf enterprise spec/enterprise
       - name: Prepare database
         run: bundle exec rake db:create db:schema:load
+      # Production preloads all code; this proves the app boots there without enterprise/ (licence, enterprise audit P0).
+      - name: Boot in production mode without enterprise code
+        run: >-
+          bundle exec rails runner
+          'Rails.application.eager_load!; abort("enterprise code loaded") if ChatwootApp.enterprise?; puts "Production boot OK"'
+        env:
+          RAILS_ENV: production
+          SECRET_KEY_BASE: wadesk-ci-boot-check-not-a-secret
+          POSTGRES_DATABASE: chatwoot_test
+          POSTGRES_USERNAME: postgres
+          POSTGRES_PASSWORD: ''
       - name: Select specs
         run: |
           BASE=${{ github.event.pull_request.base.sha || 'HEAD~1' }}
