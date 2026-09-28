@@ -186,6 +186,6 @@ user to it, checks System health and changes an allowed setting, all without lea
 ## Out of this plan (next steps)
 Step 2: plans, Razorpay billing, signup and account provisioning, suspension, rebranding; safety S2 (consent history,
 opt-in capture, campaign audience filtering and review, campaign permission, audit log — [04-safety-requirements.md](04-safety-requirements.md)).
-Step 2 also re-plans with Step 3 items below; the bulk number checker is dropped (looks like contact harvesting).
+Step 2 also re-plans with Step 3 items below; the bulk number checker is dropped (looks like contact harvesting); a single-number check (one contact at a time) is allowed.
 Step 3+: groups, Status, profile, call auto-reject, history import, AI transcription; safety S3 (WhatsApp Health view with
 Meta quality rating, safety events).

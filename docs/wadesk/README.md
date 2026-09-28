@@ -85,7 +85,9 @@ We follow a gated, iterative lifecycle. Each gate requires product-owner approva
 
 - Prefer **new files** over editing Chatwoot files. When an upstream file must change, keep the edit minimal
   and list it in [02-architecture.md § Upstream touch points](02-architecture.md#upstream-touch-points).
-- Never modify files under `enterprise/` (separate licence; see ADR-0001).
+- Never modify files under `enterprise/` (separate licence; see ADR-0001). It is excluded from the production image.
+- Never remove or edit `LICENSE`: Chatwoot's copyright line and the MIT notice must stay, whatever the rebrand changes
+  on screen ([enterprise audit §7](05-enterprise-feature-audit.md)).
 - Our non-Rails code lives in `wadesk-engine/` at the repo root.
 
 ## Local development

@@ -4,8 +4,9 @@
 **Scope:** every feature in Chatwoot's `enterprise/` directory in the exact version WaDesk runs; what WaDesk needs;
 the licensing boundary; how WaDesk builds the needed features without using proprietary code.
 
-> Not legal advice. The licence reading below is the engineering team's; have a lawyer confirm it before WaDesk is
-> sold commercially. The per-feature provenance records this document asks for are meant to make that review easy.
+> Not legal advice: this is the engineering team's reading of the licence files. Instead of a lawyer review, the
+> product owner keeps the plan low-risk (§7): no enterprise code in production, clean-room features, MIT notice kept,
+> full rebrand, a client agreement for WhatsApp Web risk.
 
 ## 1. Version facts (from the checked-out source)
 
@@ -101,14 +102,25 @@ extend), *Independent* (WaDesk writes the backend; reuses MIT screens/tables whe
    enterprise-only controllers are guarded; production-mode boot with `enterprise/` removed is checked.*
 2. **Rebrand**, done through the white-label settings wherever possible (installation name, brand name, logos, links,
    email sender), with code changes only where a setting doesn't exist (hard-coded texts, emails, icons).
-3. Clean-room WaDesk versions of enterprise features, in this order:
+3. **Build order after the rebrand** (product-owner decision, 2026-09-28; each item planned, built and tested on its
+   own, clean-room where it is an enterprise-style feature, and within the safety layer, ADR-0006):
    1. **Security setup** — 2FA (encryption keys), session limits, rate limits: configure and verify.
    2. **Voice-note transcription.**
-   3. **AI writing help** (reply suggestions, rewrite, summary): switch on, with usage limits per client.
-   4. **Audit logs.**
-   5. **Custom roles and permissions.**
-   6. **AI auto-reply bot with knowledge base** — needs a safety review for WhatsApp Web before it can answer there.
-   7. **WhatsApp campaign analytics** — Official only, inside the WaDesk campaign rules (ADR-0006).
+   3. **AI writing help** (reply suggestions, rewrite, summary) — switch on, with usage limits per client.
+   4. **Remaining WhatsApp Web message types** (e.g. location, contacts, stickers, reactions, polls — sending and receiving
+      where WhatsApp Web allows).
+   5. **Call auto-reject** for WhatsApp Web numbers (optional per inbox, with an auto-reply).
+   6. **Audit logs.**
+   7. **Custom roles and permissions.**
+   8. **Profile** — business profile of the linked number (name, photo, about).
+   9. **Status** — posting WhatsApp Status from the linked number.
+   10. **History import + labels** — import past chats on linking; sync WhatsApp labels.
+   11. **Single-number checker** — one number at a time, never bulk (§7).
+   12. **Proxy per number** — optional outbound proxy for each WhatsApp Web connection, so many clients' numbers do not
+       share one server address; its plan confirms this is not used to disguise automation (ADR-0006 point 3).
+   13. **Groups** — group conversations in the inbox.
+   14. **AI auto-reply bot with knowledge base** — only after the WhatsApp Web safety review.
+   15. **WhatsApp campaign analytics** — Official only, inside the WaDesk campaign rules.
 4. **Later:** SLA, smart assignment (capacity, least-busy), required conversation fields.
 5. **Skipped for now:** SAML SSO, WhatsApp / Twilio calling, conversation monitors, advanced search.
 
@@ -119,7 +131,7 @@ provenance record.
 
 ### Business and operating model (product-owner input, 2026-09-28)
 - **WaDesk is sold by the product owner as an individual, as a hosted service:** clients get logins to WaDesk; the
-  software itself is not distributed to them. Licensing and the lawyer review are framed around hosted use.
+  software itself is not distributed to them.
 - **Monthly sync with Chatwoot updates:** a `chore/upstream-sync-<version>` PR each month (merge commit, per the
   handbook). Each sync re-checks that `enterprise/` stays out of the production image, reviews newly added upstream
   enterprise features and MIT files for the inventory above, and re-runs the full suites and the smoke check.
@@ -142,5 +154,19 @@ provenance record.
 1. **P0 approved:** remove `enterprise/` from the production image and make WaDesk run fully without it; then the rebrand.
 2. **Priority order approved** as in §5 (it replaces the P columns in §4 where they differ).
 3. **Clean-room rule:** public docs and behaviour only; never copying `enterprise/` code (§2).
-4. **Lawyer review:** arranged by the product owner before the commercial launch.
-5. **Added to the plan:** hosted service sold by an individual; monthly upstream sync; rebrand via white-label settings.
+4. **Added to the plan:** hosted service sold by an individual; monthly upstream sync; rebrand via white-label settings.
+
+### Low-risk policy (product-owner decision, 2026-09-28, replaces the earlier lawyer-review item)
+1. **No enterprise code in production** — `enterprise/` removed from the image completely (P0).
+2. **Clean-room only** — enterprise-style features are built from public documentation and observed behaviour; nobody
+   reads `enterprise/` code for them (§2).
+3. **Chatwoot's MIT notice stays** — the `LICENSE` file (Chatwoot's copyright line and the MIT text) is never removed or
+   edited; the rebrand changes what users see, not the licence. A spec guards the file.
+4. **Full rebrand** — no Chatwoot name, logo or link visible to clients, their customers or the operator (acceptance
+   check of the rebrand). Machine identifiers that integrations depend on (widget SDK names, webhook headers, database
+   names) are not user-visible and stay.
+5. **Number checker: single number only** — checking whether one number is on WhatsApp, done by an agent for one
+   contact at a time; no bulk or list checking (it looks like contact harvesting, ADR-0006).
+6. **Client agreement** — every WhatsApp Web client accepts the one-page agreement
+   [templates/whatsapp-web-client-agreement.md](templates/whatsapp-web-client-agreement.md) (unofficial connection,
+   possible bans, no liability for bans) before their Web number is linked.
