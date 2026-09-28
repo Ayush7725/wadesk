@@ -178,7 +178,7 @@ user to it, checks System health and changes an allowed setting, all without lea
 | Step | What | Notes |
 |---|---|---|
 | 1 | Record S2.1 acceptance | Done ([record](acceptance/S2.1.md)) |
-| 2 | Full rebrand from Chatwoot to WaDesk | Needs its own change request: every screen, email, widget and asset, and running without Chatwoot's enterprise code (see Open items) |
+| 2 | Run without Chatwoot's enterprise code (P0), then the full rebrand via white-label settings | [Enterprise audit](05-enterprise-feature-audit.md) §5; then clean-room WaDesk versions of the approved enterprise features in the order agreed there |
 | 3 | All Evolution API features, one at a time | Each one planned, built and tested separately, within the safety layer (ADR-0006): nothing that sends bulk or unsolicited messages from WhatsApp Web |
 | 4 | Test every Chatwoot feature, and the operator console | A written checklist run in the browser; bugs fixed as they are found |
 | 5 | Server and release | Staging server, capacity and fault tests (M5.2, M5.3), 72-hour soak (M5.5), retire Evolution (M5.6), tag v0.1 |
