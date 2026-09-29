@@ -42,7 +42,7 @@
         <%= content_tag(branding_editable ? :label : :p, setting.label, for: (id if branding_editable), class: 'text-sm font-medium text-n-slate-12') %>
         <p id="<%= id %>-hint" class="text-xs text-n-slate-11"><%= setting.hint %></p>
         <% if branding_editable %>
-          <%= text_field_tag "settings[#{setting.key}]", @values[setting.key], id: id, required: true,
+          <%= text_field_tag "settings[#{setting.key}]", @values[setting.key], id: id, required: !setting.optional,
                              maxlength: Wadesk::InstallationSettings::TEXT_MAX_LENGTH,
                              type: (setting.kind == :url ? 'url' : 'text'), inputmode: (setting.kind == :text ? nil : 'url'),
                              autocomplete: 'off', spellcheck: false,

@@ -82,11 +82,12 @@ module PortalHelper
     end
   end
 
+  # nil when no brand URL is set (WaDesk ships without one), so the footer shows the name without a link.
   def generate_portal_brand_url(brand_url, referer)
+    return if brand_url.blank?
+
     url = URI.parse(brand_url.to_s)
-    query_params = Rack::Utils.parse_query(url.query)
-    query_params['utm_medium'] = 'helpcenter'
-    query_params['utm_campaign'] = 'branding'
+    query_params = Rack::Utils.parse_query(url.query).merge('utm_medium' => 'helpcenter', 'utm_campaign' => 'branding')
     query_params['utm_source'] = URI.parse(referer).host if url_valid?(referer)
 
     url.query = query_params.to_query

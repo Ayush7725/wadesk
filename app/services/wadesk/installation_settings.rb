@@ -2,7 +2,8 @@
 # written. Values are stored the way Chatwoot stores them (InstallationConfig, read through GlobalConfig; saving clears
 # GlobalConfig's cache, so the apps pick up a change on their next page load).
 class Wadesk::InstallationSettings
-  Setting = Struct.new(:key, :label, :hint, :kind, keyword_init: true) do
+  # kind :link is a web address or a page on this server ("/terms.html"); optional settings may be left empty.
+  Setting = Struct.new(:key, :label, :hint, :kind, :optional, keyword_init: true) do
     def brand? = kind != :boolean
   end
 
@@ -14,10 +15,14 @@ class Wadesk::InstallationSettings
                 hint: 'Shown in browser tabs and the chat widget. Anything but "Chatwoot" also hides Chatwoot\'s help links and upsells ' \
                       'in the client app, and client menus then follow exactly the features you switch on per client.'),
     Setting.new(key: 'BRAND_NAME', kind: :text, label: 'Brand name', hint: 'Shown in emails and under the chat widget ("Powered by …").'),
-    Setting.new(key: 'BRAND_URL', kind: :url, label: 'Brand website', hint: 'Where the "Powered by" link in emails goes.'),
-    Setting.new(key: 'WIDGET_BRAND_URL', kind: :url, label: 'Chat widget link', hint: 'Where the "Powered by" link under the chat widget goes.'),
-    Setting.new(key: 'TERMS_URL', kind: :url, label: 'Terms of service', hint: 'Linked from the sign-up page.'),
-    Setting.new(key: 'PRIVACY_URL', kind: :url, label: 'Privacy policy', hint: 'Linked from the sign-up page and the app.'),
+    Setting.new(key: 'BRAND_URL', kind: :url, optional: true, label: 'Brand website',
+                hint: 'Where the brand name in the footer of emails links to. Leave empty for no link.'),
+    Setting.new(key: 'WIDGET_BRAND_URL', kind: :url, optional: true, label: 'Chat widget link',
+                hint: 'Where the "Powered by" line under the chat widget links to. Leave empty for no link.'),
+    Setting.new(key: 'TERMS_URL', kind: :link, label: 'Terms of service',
+                hint: 'Linked from the sign-up page. A web address or a page on this server (/terms.html).'),
+    Setting.new(key: 'PRIVACY_URL', kind: :link, label: 'Privacy policy',
+                hint: 'Linked from the sign-up page and the app. A web address or a page on this server (/privacy.html).'),
     Setting.new(key: 'LOGO', kind: :image, label: 'Logo', hint: 'Shown on the login and sign-up pages and in the app.'),
     Setting.new(key: 'LOGO_DARK', kind: :image, label: 'Logo for dark mode', hint: 'The same places, when dark mode is on.'),
     Setting.new(key: 'LOGO_THUMBNAIL', kind: :image, label: 'Small logo', hint: 'The browser tab icon and the chat widget (square, 512 × 512).')
@@ -73,17 +78,17 @@ class Wadesk::InstallationSettings
   def invalid(setting, value)
     value = value.to_s.strip
     return ('must be on or off' unless %w[0 1].include?(value)) if setting.kind == :boolean
-    return 'cannot be empty' if value.blank?
+    return ('cannot be empty' unless setting.optional) if value.blank?
     return "must be at most #{TEXT_MAX_LENGTH} characters" if value.length > TEXT_MAX_LENGTH
 
     invalid_address(setting, value) unless setting.kind == :text
   end
 
-  # Web addresses only (no javascript:, no user:password@); logos may also be a file on this server ("/brand-assets/…").
+  # Web addresses only (no javascript:, no user:password@); logos and links may also be a file on this server ("/brand-assets/…").
   def invalid_address(setting, value)
-    return if web_address?(value) || (setting.kind == :image && value.match?(%r{\A/[^/\s]\S*\z}))
+    return if web_address?(value) || (setting.kind != :url && value.match?(%r{\A/[^/\s]\S*\z}))
 
-    setting.kind == :image ? 'must be a web address (https://…) or a path on this server (/…)' : 'must be a web address (https://…)'
+    setting.kind == :url ? 'must be a web address (https://…)' : 'must be a web address (https://…) or a path on this server (/…)'
   end
 
   def web_address?(value)

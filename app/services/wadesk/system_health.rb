@@ -81,7 +81,11 @@ class Wadesk::SystemHealth
 
   def email
     sender = email_sender
-    details = sender ? ["Emails are sent from #{sender}"] : ['No sender address is set, so emails say they come from Chatwoot.']
+    details = if sender
+                ["Emails are sent from #{sender}"]
+              else
+                ['No sender address is set (MAILER_SENDER_EMAIL), so emails come from a placeholder address that mail servers may reject.']
+              end
     if ENV['SMTP_ADDRESS'].blank?
       check(:email, 'Email', :warn, 'No email server is set up, so invitations and password resets may never arrive.', details: details)
     elsif sender.nil?
