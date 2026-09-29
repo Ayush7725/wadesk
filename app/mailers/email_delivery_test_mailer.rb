@@ -9,7 +9,7 @@ class EmailDeliveryTestMailer < ApplicationMailer
   private
 
   def brand_name
-    GlobalConfig.get_value('BRAND_NAME').presence || 'Chatwoot'
+    GlobalConfig.get_value('BRAND_NAME').presence || 'WaDesk'
   end
 
   def liquid_locals

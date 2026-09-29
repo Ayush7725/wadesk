@@ -76,7 +76,7 @@ class RequestDeviceInfo
 
     @mobile = true
     attrs.merge(
-      browser_name: 'Chatwoot Mobile',
+      browser_name: 'Mobile app',
       browser_version: nil,
       platform_name: hit[:platform],
       platform_version: nil,

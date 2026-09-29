@@ -297,15 +297,9 @@ describe PortalHelper do
       expect(params['utm_source']).to eq('app.chatwoot.com')
     end
 
-    it 'returns utm string when brand_url is nil or empty' do
-      expect(helper.generate_portal_brand_url(nil,
-                                              'https://app.chatwoot.com')).to eq(
-                                                '?utm_campaign=branding&utm_medium=helpcenter&utm_source=app.chatwoot.com'
-                                              )
-      expect(helper.generate_portal_brand_url('',
-                                              'https://app.chatwoot.com')).to eq(
-                                                '?utm_campaign=branding&utm_medium=helpcenter&utm_source=app.chatwoot.com'
-                                              )
+    it 'returns nil when brand_url is nil or empty, so the footer shows the name without a link' do
+      expect(helper.generate_portal_brand_url(nil, 'https://app.chatwoot.com')).to be_nil
+      expect(helper.generate_portal_brand_url('', 'https://app.chatwoot.com')).to be_nil
     end
 
     it 'omits utm_source when referer is nil or invalid' do

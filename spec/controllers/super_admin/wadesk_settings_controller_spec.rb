@@ -159,6 +159,29 @@ RSpec.describe 'Super Admin WaDesk settings', type: :request do
         expect(config_value('ENABLE_ACCOUNT_SIGNUP')).to be(false)
       end
 
+      it 'saves the form as shipped: no brand links and terms and privacy pages on this server' do
+        shipped = ConfigLoader.new.general_configs.to_h { |config| [config['name'], config['value']] }.slice(*brand.keys.map(&:to_s))
+        expect(shipped).to include('BRAND_URL' => '', 'WIDGET_BRAND_URL' => '', 'TERMS_URL' => '/terms.html', 'PRIVACY_URL' => '/privacy.html')
+
+        get '/super_admin/wadesk_settings'
+        expect(page.at_css('#settings_BRAND_URL')['required']).to be_nil
+        expect(page.at_css('#settings_TERMS_URL')['type']).to eq('text')
+        expect(page.at_css('#settings_BRAND_NAME')['required']).to eq('required')
+
+        patch '/super_admin/wadesk_settings', params: { settings: shipped.merge('ENABLE_ACCOUNT_SIGNUP' => '0') }
+
+        expect(response).to redirect_to('/super_admin/wadesk_settings')
+        expect(GlobalConfig.get(*shipped.keys)).to eq(shipped)
+      end
+
+      it 'accepts a page on this server only for the terms and privacy links' do
+        patch '/super_admin/wadesk_settings', params: { settings: { TERMS_URL: '/legal/terms.html', BRAND_URL: '/about' } }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(page.at_css('#settings_TERMS_URL-error')).to be_nil
+        expect(page.at_css('#settings_BRAND_URL-error').text).to include('must be a web address (https://…).')
+      end
+
       it 'rejects an empty brand name' do
         patch '/super_admin/wadesk_settings', params: { settings: { BRAND_NAME: ' ' } }
 

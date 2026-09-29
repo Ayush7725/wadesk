@@ -22,10 +22,10 @@ RSpec.describe RequestDeviceInfo do
     expect(info.platform_label).to eq('iPhone')
   end
 
-  it 'labels a legacy okhttp mobile UA as Chatwoot Mobile' do
+  it 'labels a legacy okhttp mobile UA as the mobile app' do
     info = described_class.new(request_double(user_agent: 'okhttp/4.9.0'))
 
-    expect(info.browser_name).to eq('Chatwoot Mobile')
+    expect(info.browser_name).to eq('Mobile app')
     expect(info.platform_label).to eq('Android')
   end
 

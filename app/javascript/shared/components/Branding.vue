@@ -56,10 +56,11 @@ export default {
     v-if="globalConfig.brandName && !disableBranding"
     class="px-0 py-3 flex justify-center"
   >
-    <a
-      :href="brandRedirectURL"
-      rel="noreferrer noopener nofollow"
-      target="_blank"
+    <component
+      :is="brandRedirectURL ? 'a' : 'span'"
+      :href="brandRedirectURL || undefined"
+      :rel="brandRedirectURL ? 'noreferrer noopener nofollow' : undefined"
+      :target="brandRedirectURL ? '_blank' : undefined"
       class="branding--link text-n-slate-11 hover:text-n-slate-12 cursor-pointer text-xs inline-flex grayscale-[1] hover:grayscale-0 hover:opacity-100 opacity-90 no-underline justify-center items-center leading-3"
     >
       <img
@@ -70,7 +71,7 @@ export default {
       <span>
         {{ replaceInstallationName($t('POWERED_BY')) }}
       </span>
-    </a>
+    </component>
   </div>
   <div v-else class="p-3" />
 </template>
