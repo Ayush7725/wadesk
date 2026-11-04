@@ -15,6 +15,9 @@ const latestChatwootVersion = computed(() => {
 });
 
 const globalConfig = useMapGetter('globalConfig/get');
+const isACustomBrandedInstance = useMapGetter(
+  'globalConfig/isACustomBrandedInstance'
+);
 
 const hasAnUpdateAvailable = computed(() => {
   if (!semver.valid(latestChatwootVersion.value)) {
@@ -35,7 +38,13 @@ const copyGitSha = () => {
 
 <template>
   <div class="p-4 text-sm text-center">
-    <div v-if="hasAnUpdateAvailable && globalConfig.displayManifest">
+    <div
+      v-if="
+        !isACustomBrandedInstance &&
+        hasAnUpdateAvailable &&
+        globalConfig.displayManifest
+      "
+    >
       {{
         t('GENERAL_SETTINGS.UPDATE_CHATWOOT', {
           latestChatwootVersion: latestChatwootVersion,

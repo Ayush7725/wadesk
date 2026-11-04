@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useMapGetter } from 'dashboard/composables/store';
 
 defineProps({
   title: { type: String, default: '' },
@@ -12,6 +13,10 @@ defineProps({
   learnMoreUrl: { type: String, default: '' },
   hideActions: { type: Boolean, default: false },
 });
+
+const isACustomBrandedInstance = useMapGetter(
+  'globalConfig/isACustomBrandedInstance'
+);
 
 const imageError = ref(false);
 
@@ -79,7 +84,7 @@ const openLink = link => {
             />
 
             <Button
-              v-if="learnMoreUrl"
+              v-if="learnMoreUrl && !isACustomBrandedInstance"
               :label="$t('FEATURE_SPOTLIGHT.LEARN_MORE')"
               sm
               faded

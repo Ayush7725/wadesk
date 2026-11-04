@@ -15,11 +15,11 @@ class Integrations::App
   end
 
   def description
-    I18n.t("integration_apps.#{params[:i18n_key]}.description")
+    with_installation_name(I18n.t("integration_apps.#{params[:i18n_key]}.description"))
   end
 
   def short_description
-    I18n.t("integration_apps.#{params[:i18n_key]}.short_description")
+    with_installation_name(I18n.t("integration_apps.#{params[:i18n_key]}.short_description"))
   end
 
   def logo
@@ -128,6 +128,10 @@ class Integrations::App
   end
 
   private
+
+  def with_installation_name(text)
+    text.gsub('Chatwoot', GlobalConfig.get_value('INSTALLATION_NAME').presence || 'WaDesk')
+  end
 
   def shopify_enabled?(account)
     Shopify::FeatureGate.enabled?(account: account) &&

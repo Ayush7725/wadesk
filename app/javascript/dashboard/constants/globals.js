@@ -38,7 +38,6 @@ export default {
     CONDENSED: 'condensed',
     EXPANDED: 'expanded',
   },
-  DOCS_URL: 'https://www.chatwoot.com/docs/product/',
   HELP_CENTER_DOCS_URL:
     'https://www.chatwoot.com/docs/product/others/help-center',
   TESTIMONIAL_URL:
@@ -78,5 +77,4 @@ export default {
   },
 };
 export const DEFAULT_REDIRECT_URL = '/app/';
-export const META_RESTRICTION_STATUS_URL =
-  'https://status.chatwoot.com/incidents';
+export const META_RESTRICTION_STATUS_URL = 'https://metastatus.com/';

@@ -3,13 +3,14 @@ import { createI18n } from 'vue-i18n';
 import VueDOMPurifyHTML from 'vue-dompurify-html';
 import store from '../survey/store';
 import i18nMessages from '../survey/i18n';
+import { brandMessages } from 'shared/helpers/brandMessages';
 import App from '../survey/App.vue';
 import { domPurifyConfig } from '../shared/helpers/HTMLSanitizer';
 
 const app = createApp(App);
 const i18n = createI18n({
   locale: 'en',
-  messages: i18nMessages,
+  messages: brandMessages(i18nMessages),
 });
 
 app.use(i18n);
