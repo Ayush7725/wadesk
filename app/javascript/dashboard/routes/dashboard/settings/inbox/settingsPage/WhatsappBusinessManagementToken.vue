@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
+import { useMapGetter } from 'dashboard/composables/store';
 import InboxesAPI from 'dashboard/api/inboxes';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -14,6 +15,9 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const isACustomBrandedInstance = useMapGetter(
+  'globalConfig/isACustomBrandedInstance'
+);
 const WHATSAPP_BUSINESS_MANAGEMENT_TOKEN_GUIDE_URL = 'https://chwt.app/zM7G2yU';
 const businessManagementToken = ref('');
 const isUpdating = ref(false);
@@ -131,6 +135,7 @@ const updateToken = async () => {
         </NextButton>
       </div>
       <a
+        v-if="!isACustomBrandedInstance"
         :href="WHATSAPP_BUSINESS_MANAGEMENT_TOKEN_GUIDE_URL"
         target="_blank"
         rel="noopener noreferrer"

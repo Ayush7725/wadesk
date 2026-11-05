@@ -21,7 +21,10 @@ export default {
     return { userDismissedBanner: false };
   },
   computed: {
-    ...mapGetters({ globalConfig: 'globalConfig/get' }),
+    ...mapGetters({
+      globalConfig: 'globalConfig/get',
+      isACustomBrandedInstance: 'globalConfig/isACustomBrandedInstance',
+    }),
     updateAvailable() {
       return hasAnUpdateAvailable(
         this.latestChatwootVersion,
@@ -35,6 +38,7 @@ export default {
     },
     shouldShowBanner() {
       return (
+        !this.isACustomBrandedInstance &&
         !this.userDismissedBanner &&
         this.globalConfig.displayManifest &&
         this.updateAvailable &&

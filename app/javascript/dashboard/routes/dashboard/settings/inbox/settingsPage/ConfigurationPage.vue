@@ -59,6 +59,7 @@ export default {
   },
   computed: {
     ...mapGetters({
+      isACustomBrandedInstance: 'globalConfig/isACustomBrandedInstance',
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
     }),
     isEmbeddedSignupWhatsApp() {
@@ -301,6 +302,7 @@ export default {
           <p class="mt-1.5 text-label-small text-n-slate-11">
             {{ $t('INBOX_MGMT.SETTINGS_POPUP.HMAC_DESCRIPTION') }}
             <a
+              v-if="!isACustomBrandedInstance"
               target="_blank"
               rel="noopener noreferrer"
               href="https://www.chatwoot.com/docs/product/channels/live-chat/sdk/identity-validation/"

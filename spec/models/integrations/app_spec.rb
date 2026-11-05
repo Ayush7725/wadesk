@@ -15,6 +15,22 @@ RSpec.describe Integrations::App do
     end
   end
 
+  describe '#description' do
+    let(:app_name) { 'slack' }
+
+    it 'names the installation instead of Chatwoot in every language' do
+      InstallationConfig.find_or_initialize_by(name: 'INSTALLATION_NAME').update!(value: 'Acme Desk')
+      GlobalConfig.clear_cache
+
+      I18n.with_locale(:de) do
+        expect(app.description).to include('Acme Desk')
+        expect(app.description).not_to include('Chatwoot')
+      end
+    ensure
+      GlobalConfig.clear_cache
+    end
+  end
+
   describe '#logo' do
     let(:app_name) { 'slack' }
 

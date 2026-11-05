@@ -1,4 +1,5 @@
 <script setup>
+import { useMapGetter } from 'dashboard/composables/store';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useBranding } from 'shared/composables/useBranding';
@@ -179,6 +180,9 @@ const currentStepDetails = computed(() => steps.value[currentStep.value]);
 const isFirstStep = computed(() => currentStep.value === 0);
 const isLastStep = computed(() => currentStep.value === steps.value.length - 1);
 const guideUrl = WHATSAPP_MANUAL_MIGRATION_GUIDE_URL;
+const isACustomBrandedInstance = useMapGetter(
+  'globalConfig/isACustomBrandedInstance'
+);
 const hasBusinessDetails = computed(
   () => form.value.wabaId.trim() && form.value.phoneNumberId.trim()
 );
@@ -356,6 +360,7 @@ defineExpose({ open, close });
             </div>
 
             <a
+              v-if="!isACustomBrandedInstance"
               :href="guideUrl"
               target="_blank"
               rel="noopener noreferrer"
